@@ -25,6 +25,11 @@ import pl.marrod.remindershowcase.ui.navigation.AppNavHost
 import pl.marrod.remindershowcase.ui.navigation.Routes
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 
+// TODO: dodać animacje przejścia między ekranami
+// TODO: poprawić UI/UX -dialog przy usuwaniu (usuwanie w stylu swipe to delete)
+// TODO: ustawianie czasu przez time picker, a nie ręczne wpisywanie minut
+// TODO: kilknięcie w powiadomienie otwiera ekran informacji o reminder
+
 class MainActivity : ComponentActivity() {
     var permissionGranted = false
     private val requestPermissionLauncher = registerForActivityResult(
