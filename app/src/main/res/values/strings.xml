@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">ReminderShowcase</string>
+    <string name="screen_title_list">My Reminders</string>
+    <string name="screen_title_add">Add Reminder</string>
+    <string name="screen_title_edit">Edit Reminder</string>
+</resources>
