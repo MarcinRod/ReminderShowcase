@@ -29,7 +29,7 @@ import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 // TODO: poprawić UI/UX -dialog przy usuwaniu (usuwanie w stylu swipe to delete)
 // TODO: ustawianie czasu przez time picker, a nie ręczne wpisywanie minut
 // TODO: kilknięcie w powiadomienie otwiera ekran informacji o reminder
-
+// TODO: dodanie karty nadchodzącego powiadomienia na ekran główny - zegar odliczający czas z tytułem i opisem przypomnienia
 class MainActivity : ComponentActivity() {
     var permissionGranted = false
     private val requestPermissionLauncher = registerForActivityResult(

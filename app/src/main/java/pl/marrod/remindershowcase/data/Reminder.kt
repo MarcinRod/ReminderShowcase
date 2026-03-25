@@ -4,5 +4,6 @@ data class Reminder(
     val id: String,
     val title: String,
     val description: String,
-    val timestamp: Long
+    val timestamp: Long,
+    val createdAtTimestamp: Long = System.currentTimeMillis()
 )
