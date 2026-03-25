@@ -8,6 +8,7 @@
     <!--    For a production app published on the Play Store you would need to
     declare in the store listing that the app is a reminder/alarm/calendar
     app to pass review.-->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
@@ -30,11 +31,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="false"
-            android:label="Settings"
-            android:theme="@style/Theme.ReminderShowcase" />
+
 
         <receiver
             android:name=".notifications.ReminderReceiver"

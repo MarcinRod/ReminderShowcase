@@ -42,4 +42,24 @@ class ReminderStorage(private val context: Context) {
         reminders.removeAll { it.id == id }
         saveReminders(reminders)
     }
+
+
+
+    companion object {
+        fun createDummyReminders(number: Int): List<Reminder> {
+            val dummyReminders = mutableListOf<Reminder>()
+            val now = System.currentTimeMillis()
+            for (i in 1..number) {
+                dummyReminders.add(
+                    Reminder(
+                        id = "reminder_$i",
+                        title = "Reminder $i",
+                        description = "This is a description for reminder $i.",
+                        timestamp = now + i * 60 * 60 * 1000L // Each reminder 1 hour apart
+                    )
+                )
+            }
+            return dummyReminders
+        }
+    }
 }
