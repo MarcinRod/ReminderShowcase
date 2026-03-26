@@ -145,7 +145,7 @@ fun ReminderForm(
                 modifier = Modifier
                     .fillMaxWidth(),
 
-            )
+                )
         }
 
         Button(
@@ -385,6 +385,7 @@ fun ReminderItem(
 @Composable
 fun ReminderItemSimple(
     reminder: Reminder,
+    isFromPast: Boolean,
     isRevealed: Boolean,
     onReveal: (Boolean) -> Unit,
     onDelete: () -> Unit,
@@ -467,46 +468,42 @@ fun ReminderItemSimple(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                // Settle helper — shared by both gesture blocks
-                .let { mod ->
-                    mod.pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { _ ->
-                                Log.i(
-                                    "ReminderItemSimple",
-                                    "Drag started for reminder with id ${reminder.id}, isRevealed = $isRevealed"
-                                )
-                            },
-                            onHorizontalDrag = { change, dragAmount ->
-                                Log.i(
-                                    "ReminderItemSimple",
-                                    "Dragging reminder with id ${reminder.id}, dragAmount = $dragAmount"
-                                )
-                                change.consume()
-                                scope.launch {
-                                    offsetX.snapTo((offsetX.value + dragAmount).coerceAtMost(0f))
-                                }
-                            },
-                            onDragEnd = {
-                                Log.i(
-                                    "ReminderItemSimple",
-                                    "Drag ended for reminder with id ${reminder.id}, settling..."
-                                )
-                                settle()
-                            },
-                            onDragCancel = {
-                                Log.i(
-                                    "ReminderItemSimple",
-                                    "Drag cancelled for reminder with id ${reminder.id}, settling..."
-                                )
-                                settle()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { _ ->
+                            Log.i(
+                                "ReminderItemSimple",
+                                "Drag started for reminder with id ${reminder.id}, isRevealed = $isRevealed"
+                            )
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            Log.i(
+                                "ReminderItemSimple",
+                                "Dragging reminder with id ${reminder.id}, dragAmount = $dragAmount"
+                            )
+                            change.consume()
+                            scope.launch {
+                                offsetX.snapTo((offsetX.value + dragAmount).coerceAtMost(0f))
                             }
-                        )
-                    }
-
+                        },
+                        onDragEnd = {
+                            Log.i(
+                                "ReminderItemSimple",
+                                "Drag ended for reminder with id ${reminder.id}, settling..."
+                            )
+                            settle()
+                        },
+                        onDragCancel = {
+                            Log.i(
+                                "ReminderItemSimple",
+                                "Drag cancelled for reminder with id ${reminder.id}, settling..."
+                            )
+                            settle()
+                        }
+                    )
                 },
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = if(!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
             ),
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
         ) {

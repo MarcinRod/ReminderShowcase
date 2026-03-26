@@ -16,6 +16,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val deepLinkScheme = "remindershowcase"
+        val deepLinkHost   = "reminder"
+        manifestPlaceholders["deepLinkScheme"] = deepLinkScheme
+        manifestPlaceholders["deepLinkHost"]   = deepLinkHost
+        buildConfigField("String", "DEEP_LINK_SCHEME", "\"$deepLinkScheme\"")
+        buildConfigField("String", "DEEP_LINK_HOST",   "\"$deepLinkHost\"")
     }
 
     buildTypes {
@@ -33,6 +40,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

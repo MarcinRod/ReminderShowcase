@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,14 +21,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import pl.marrod.remindershowcase.data.Reminder
-import pl.marrod.remindershowcase.data.ReminderStorage
 import pl.marrod.remindershowcase.ui.reminder.ReminderBottomSheet
 import pl.marrod.remindershowcase.ui.reminder.ReminderItemSimple
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
@@ -112,20 +111,63 @@ fun ReminderListContent(
             Text("No reminders yet. Tap + to add one!", style = MaterialTheme.typography.bodyLarge)
         }
     } else {
-        var sortedReminders = remember(reminders) { reminders.sortedBy { it.timestamp } }
-        var currentReminder by remember { mutableStateOf(reminders.firstOrNull()) }
+        var recomputeKey by remember { mutableStateOf(0) }
+        var showPast by remember { mutableStateOf(true) }
         var revealedReminderId by remember { mutableStateOf<String?>(null) }
+
+        val sortedFutureReminders = remember(reminders, recomputeKey) {
+            reminders.filter { it.timestamp >= System.currentTimeMillis() }
+                .sortedBy { it.timestamp }
+        }
+        val sortedPastReminders = remember(reminders, recomputeKey) {
+            reminders.filter { it.timestamp < System.currentTimeMillis() }
+                .sortedByDescending { it.timestamp }
+        }
+        val displayedReminders = remember(showPast, sortedFutureReminders, sortedPastReminders) {
+            if (showPast) sortedFutureReminders + sortedPastReminders else sortedFutureReminders
+        }
+        val currentReminder = remember(sortedFutureReminders) {
+            sortedFutureReminders.firstOrNull()
+        }
+
+
+
         Column(modifier = modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(16.dp))
-            // TODO: update the reminder when the next one becomes the "soonest"
-            currentReminder?.let { it ->
+            currentReminder?.let {
                 ReminderListHeader(reminder = it) {
-                    sortedReminders = sortedReminders.drop(1)
-                    currentReminder = sortedReminders.firstOrNull()
-
+                    recomputeKey++
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Show past reminders",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Switch(
+                    checked = showPast,
+                    onCheckedChange = {
+                        showPast = it
+                    },
+                    colors = SwitchDefaults.colors(
+                             checkedThumbColor = MaterialTheme.colorScheme.primary,
+                             uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                             checkedTrackColor = MaterialTheme.colorScheme.surface,
+                             uncheckedTrackColor = MaterialTheme.colorScheme.surface,
+                        checkedBorderColor = MaterialTheme.colorScheme.outline,
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                    ),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
             val scrollState = rememberLazyListState()
 
             LaunchedEffect(scrollState.isScrollInProgress) {
@@ -139,12 +181,13 @@ fun ReminderListContent(
                 state = scrollState,
                 modifier = Modifier
                     .weight(1f),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(sortedReminders, key = { it.id }) { reminder ->
+                items(displayedReminders, key = { it.id }) { reminder ->
                     ReminderItemSimple(
                         reminder = reminder,
+                        isFromPast = reminder.timestamp < System.currentTimeMillis(),
                         isRevealed = revealedReminderId == reminder.id,
                         onReveal = { isRevealed ->
                             revealedReminderId = if (isRevealed) reminder.id
@@ -172,13 +215,13 @@ fun ReminderListHeader(
     onReminderFinish: () -> Unit = { }
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var progress by remember { mutableStateOf(0f) }
+    var progress by remember(reminder) { mutableStateOf(0f) }
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
     )
-    var timeLeft by remember { mutableStateOf(reminder.timestamp - System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
+    var timeLeft by remember(reminder) { mutableStateOf(reminder.timestamp - System.currentTimeMillis()) }
+    LaunchedEffect(reminder) {
         coroutineScope.launch {
             val totalDuration = reminder.timestamp - reminder.createdAtTimestamp
             var elapsed = System.currentTimeMillis() - reminder.createdAtTimestamp
@@ -189,6 +232,7 @@ fun ReminderListHeader(
                 timeLeft = reminder.timestamp - System.currentTimeMillis()
             }
             progress = 1f // Ensure it reaches 100% when done
+            onReminderFinish()
             timeLeft = 0L
         }
     }

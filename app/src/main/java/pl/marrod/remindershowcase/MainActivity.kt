@@ -7,7 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Toast
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -27,17 +27,19 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
+import pl.marrod.remindershowcase.notifications.NotificationHelper
 import pl.marrod.remindershowcase.ui.navigation.AppNavHost
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 
 
-// TODO: kilknięcie w powiadomienie otwiera ekran informacji o reminder
-// TODO: Aktualizacja listy w przypadku gdy jest już po czasie. Czy wyświetlać przeszłe powiadomienia? Switch
-// TODO: EKran szczegółów przypomnienia, do pokazania deep linków. Tylko przez kliknięcie w powiadomienie
 
+// TODO: zasymolwać długotrwały zapis do pliku, żeby pokazać działanie korutyn
+// TODO: Poczyścić kod
+// TODO: dodać ViewModel do zarządzania stanem (architektura MVVM)
 class MainActivity : ComponentActivity() {
     var permissionGranted by mutableStateOf(false)
     var showPermissionRationale by mutableStateOf(false)
+    var currentIntent by mutableStateOf<Intent?>(null)
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -73,6 +75,14 @@ class MainActivity : ComponentActivity() {
             ReminderShowcaseTheme {
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
+
+                LaunchedEffect(currentIntent) {
+                    currentIntent?.let {
+                        Log.d("Navigation", "handleDeepLink uri=${it.data} action=${it.action}")
+                        val handled = navController.handleDeepLink(it)
+                        Log.d("Navigation", "handleDeepLink result=$handled")
+                    }
+                }
 
                 LaunchedEffect(permissionGranted) {
                     if (!permissionGranted) {
@@ -111,10 +121,17 @@ class MainActivity : ComponentActivity() {
             } else {
                 permissionGranted = true
                 showPermissionRationale = false
+                NotificationHelper.createNotificationChannel(this)
                 
             }
 
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        Log.d("Navigation", "onNewIntent: ${intent.data}")
+        currentIntent = intent
     }
 
     override fun onResume() {

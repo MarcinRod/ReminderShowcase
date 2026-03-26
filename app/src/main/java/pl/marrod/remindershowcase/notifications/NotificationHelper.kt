@@ -6,14 +6,16 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import pl.marrod.remindershowcase.MainActivity
 import pl.marrod.remindershowcase.R
+import pl.marrod.remindershowcase.ui.navigation.Destination
 
 object NotificationHelper {
 
     private const val CHANNEL_ID = "reminder_channel"
 
-    fun showReminder(context: Context, id: String, title: String, description: String) {
+    fun createNotificationChannel(context: Context) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -25,9 +27,19 @@ object NotificationHelper {
             this.description = "Channel for reminder notifications"
         }
         notificationManager.createNotificationChannel(channel)
+    }
+    fun showReminder(context: Context, id: String, title: String, description: String) {
+        val notificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        val tapIntent = Intent(
+            Intent.ACTION_VIEW,
+            Destination.Details.DEEP_LINK_URI.toUri(),
+            context,
+            MainActivity::class.java
+        ).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val tapPendingIntent = PendingIntent.getActivity(
             context,

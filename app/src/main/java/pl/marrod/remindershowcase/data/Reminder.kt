@@ -33,9 +33,9 @@ data class Reminder(
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
-            putExtra(Extras.ID.name, title)
+            putExtra(Extras.ID.name, id)
             putExtra(Extras.DESCRIPTION.name, description)
-            putExtra(Extras.TITLE.name, id)
+            putExtra(Extras.TITLE.name, title)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -51,6 +51,22 @@ data class Reminder(
             pendingIntent
         )
         isNotificationScheduled = true
+    }
+
+    fun cancelNotification(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val intent = Intent(context, ReminderReceiver::class.java)
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            id.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.cancel(pendingIntent)
+        isNotificationScheduled = false
     }
 
 
