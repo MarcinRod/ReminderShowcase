@@ -11,6 +11,9 @@ sealed interface Destination {
     data class Details(val reminderId: String) : Destination{
         companion object {
             const val DEEP_LINK_URI =  "${BuildConfig.DEEP_LINK_SCHEME}://${BuildConfig.DEEP_LINK_HOST}/{reminderId}"
+            // Builds a real URI for a specific reminder (used in notifications, etc.)
+            fun buildUri(reminderId: String): String =
+                "${BuildConfig.DEEP_LINK_SCHEME}://${BuildConfig.DEEP_LINK_HOST}/$reminderId"
         }
     }
 

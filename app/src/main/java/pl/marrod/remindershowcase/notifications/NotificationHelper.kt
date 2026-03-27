@@ -35,7 +35,7 @@ object NotificationHelper {
 
         val tapIntent = Intent(
             Intent.ACTION_VIEW,
-            Destination.Details.DEEP_LINK_URI.toUri(),
+            Destination.Details.buildUri(id).toUri(),
             context,
             MainActivity::class.java
         ).apply {

@@ -25,7 +25,7 @@ import pl.marrod.remindershowcase.ui.screens.ReminderDetailScreen
 import pl.marrod.remindershowcase.ui.screens.ReminderListScreen
 
 private const val TAG = "Navigation"
-private const val USE_VIEW_MODEL = false
+private const val USE_VIEW_MODEL = true
 
 @Composable
 fun AppNavHost(
@@ -93,17 +93,17 @@ fun AppNavHost(
                                 reminder
                             }
 
-
-                            reminders = storage.loadReminders()
-                            Log.i(
-                                "AppNavHost",
-                                "Finished loading reminders after update: ${reminders.size} reminders @ ${System.currentTimeMillis()}"
-                            )
                             val result = job.await()
                             Log.i(
                                 "AppNavHost",
                                 "$result"
                             )
+                            reminders = storage.loadReminders()
+                            Log.i(
+                                "AppNavHost",
+                                "Finished loading reminders after update: ${reminders.size} reminders @ ${System.currentTimeMillis()}"
+                            )
+
                         }
                         Log.i(
                             "AppNavHost",
@@ -122,6 +122,7 @@ fun AppNavHost(
                 navDeepLink { uriPattern = Destination.Details.DEEP_LINK_URI }
             )
         ) { backStackEntry ->
+            Log.i(TAG, backStackEntry.destination.toString())
             val details = backStackEntry.toRoute<Destination.Details>()
             val reminderId = details.reminderId
 

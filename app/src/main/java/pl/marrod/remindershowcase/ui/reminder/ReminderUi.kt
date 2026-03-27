@@ -396,10 +396,10 @@ fun ReminderItemSimple(
     val density = LocalDensity.current
     val revealWidthPx = with(density) { 56.dp.toPx() }
     val dismissThresholdPx = revealWidthPx * 3f
-
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
-
+    val containerColor = if (!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
+    val textColor = if (!isFromPast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
     fun snapToRevealed() {
         scope.launch {
             offsetX.animateTo(
@@ -503,7 +503,7 @@ fun ReminderItemSimple(
                     )
                 },
             colors = CardDefaults.cardColors(
-                containerColor = if(!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
+                containerColor = containerColor
             ),
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
         ) {
@@ -517,12 +517,14 @@ fun ReminderItemSimple(
                         Text(
                             text = reminder.title,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
                         )
                         Text(
                             text = reminder.displayDateTime,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = textColor,
+
                         )
                     }
                     Row {

@@ -35,8 +35,7 @@ import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 
 
 
-// TODO: Poczyścić kod - sprawdzić zepsute deep link, i dlaczego update nie dziala dla wersji bez view model
-// TODO: dodać ViewModel do zarządzania stanem (architektura MVVM)
+// TODO: DODAĆ DOKUMETACJE
 
 class MainActivity : ComponentActivity() {
     var permissionGranted by mutableStateOf(false)

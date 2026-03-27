@@ -48,9 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
@@ -68,8 +65,7 @@ fun ReminderListScreen(
     viewModel: ReminderListViewModel = viewModel(factory = AppWideViewModelProvider.Factory)
 ) {
     val screenState by viewModel.screenState.collectAsState()
-    val showBottomSheet by viewModel.showBottomSheet.collectAsState()
-    val animatedVisibility by viewModel.animatedVisibility.collectAsState()
+
     @OptIn(ExperimentalMaterial3Api::class)
     Scaffold(
         topBar = {
@@ -89,7 +85,7 @@ fun ReminderListScreen(
                 ExtendedFloatingActionButton(
                     text = { Text("Add reminder") },
                     onClick = {
-                        viewModel.showBottomDialog()
+                        viewModel.showAddBottomDialog()
                     },
                     icon = { Icon(Icons.Default.AlarmAdd, contentDescription = "Add reminder") }
                 )
@@ -116,8 +112,10 @@ fun ReminderListScreen(
             is ScreenUiState.Success -> {
 
                 val uiState = (screenState as ScreenUiState.Success).uiState
+           //     val showBottomSheet by viewModel.showBottomSheet.collectAsState()
+            //    val animatedVisibility by viewModel.animatedVisibility.collectAsState()
                 AnimatedVisibility(
-                    visible = animatedVisibility,
+                    visible = uiState.animatedVisibility,
                     enter = fadeIn() +  slideInVertically(
                         initialOffsetY = { fullHeight -> fullHeight },
                         animationSpec = tween(500)
@@ -129,7 +127,7 @@ fun ReminderListScreen(
                     modifier = Modifier
                 ) {
 
-                    if (uiState.reminders.isEmpty()) {
+                    if (uiState.isEmpty) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -167,7 +165,7 @@ fun ReminderListScreen(
                         )
                     }
                 }
-                if (showBottomSheet) {
+                if (uiState.showBottomSheet) {
                     ReminderBottomSheet(
                         reminder = uiState.reminderToEdit,
                         onDismiss = { viewModel.hideBottomSheet() },

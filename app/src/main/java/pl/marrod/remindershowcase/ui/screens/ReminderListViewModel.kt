@@ -31,8 +31,16 @@ data class ReminderListUiState(
     val showPastReminders: Boolean = true,
     val timeUntilNextReminder: TimeWithUnit = TimeWithUnit("0", "s"),
     val progressUntilNextReminder: Float = 0f,
-    val isEmpty: Boolean = reminders.isEmpty()
-)
+    val showBottomSheet: Boolean = false,
+    val animatedVisibility: Boolean = false,
+) {
+    val isEmpty: Boolean get() = reminders.isEmpty() && showPastReminders
+    fun withNextReminder(next: Reminder?) = copy(
+        nextReminder = next,
+        timeUntilNextReminder = TimeWithUnit.fromTimestamp(next?.calculateTimeUntil()),
+        progressUntilNextReminder = next?.calculateProgressUntil() ?: 0f
+    )
+}
 
 data class TimeWithUnit(val value: String, val unit: String) {
     companion object {
@@ -59,28 +67,38 @@ class ReminderListViewModel(
     private val _screenState = MutableStateFlow<ScreenUiState>(ScreenUiState.Loading)
     val screenState = _screenState.asStateFlow()
 
-    private val _showBottomDSheet = MutableStateFlow(false)
-    val showBottomSheet = _showBottomDSheet.asStateFlow()
-
-    private val _animatedVisibility = MutableStateFlow(false)
-    val animatedVisibility = _animatedVisibility.asStateFlow()
     private var timerJob: Job? = null
+    private var allReminders: List<Reminder> = emptyList()
 
     init {
 
+
         viewModelScope.launch {
-            delay(3000) // Simulate loading delay
+            delay(3000)
             loadReminders().let { resultState ->
                 _screenState.update { resultState }
                 if (resultState is ScreenUiState.Success) {
-                    delay(50) // Small delay to ensure the UI is ready before starting animations
-                    _animatedVisibility.update { true }
-                    resultState.uiState.nextReminder?.let {
-                        restartTimer()
-                    }
+                    delay(50)
+                    updateSuccess { it.copy(animatedVisibility = true) }
+                    resultState.uiState.nextReminder?.let { restartTimer() }
                 }
             }
         }
+
+    }
+
+    // Eliminates the if (state is Success) ... else state boilerplate
+    private inline fun updateSuccess(block: (ReminderListUiState) -> ReminderListUiState) {
+        _screenState.update { state ->
+            if (state is ScreenUiState.Success) state.copy(uiState = block(state.uiState))
+            else state
+        }
+    }
+
+    // Eliminates the showPastReminders if-else split
+    private fun buildDisplayedReminders(showPast: Boolean, checkTime: Long): List<Reminder> {
+        val future = getFutureReminders(allReminders, checkTime)
+        return if (showPast) future + getPastReminders(allReminders, checkTime) else future
     }
 
     fun restartTimer() {
@@ -89,32 +107,21 @@ class ReminderListViewModel(
     }
 
     private suspend fun loadReminders(): ScreenUiState = withContext(Dispatchers.IO) {
-        val allReminders = storage.loadReminders()
+        allReminders = storage.loadReminders()
         val checkTime = System.currentTimeMillis()
-        val futureReminders = getFutureReminders(allReminders, checkTime)
-        val pastReminders = getPastReminders(allReminders, checkTime)
-        val nextReminder = getNextReminder(futureReminders, checkTime)
+        val nextReminder = getNextReminder(allReminders, checkTime)
 
         ScreenUiState.Success(
             ReminderListUiState(
-                reminders = futureReminders + pastReminders,
-                nextReminder = nextReminder,
-                timeUntilNextReminder = TimeWithUnit.fromTimestamp(nextReminder?.calculateTimeUntil()),
-                progressUntilNextReminder = nextReminder?.calculateProgressUntil() ?: 0f
-            )
+                reminders = buildDisplayedReminders(showPast = true, checkTime),
+            ).withNextReminder(nextReminder)
         )
-
-
     }
 
     private fun getNextReminder(reminders: List<Reminder>, checkTime: Long): Reminder? {
-        return reminders.firstOrNull{
-            // in case that we have reminders with past timestamps,
-            // we want to show the next upcoming reminder, not the past one
-            it.timestamp > checkTime
-        }
-
+        return getFutureReminders(reminders, checkTime).firstOrNull()
     }
+
     private fun getFutureReminders(reminders: List<Reminder>, checkTime: Long): List<Reminder> {
         return reminders.filter { it.timestamp >= checkTime }
             .sortedBy { it.timestamp }
@@ -133,161 +140,103 @@ class ReminderListViewModel(
             val reminder = currentState.uiState.nextReminder
             reminder ?: break
             val checkTime = System.currentTimeMillis()
-
             val timeUntilNext = reminder.timestamp - checkTime
+
             if (timeUntilNext <= 0) {
                 // reminder time has passed, update the state to show it as past
-                val futureReminders = getFutureReminders(currentState.uiState.reminders, checkTime)
-                val pastReminders = getPastReminders(currentState.uiState.reminders, checkTime)
-                val nextReminder =
-                    futureReminders.firstOrNull { it.timestamp > checkTime }
-                _screenState.update { currentState ->
-                    if (currentState is ScreenUiState.Success) {
-                        currentState.copy(
-                            uiState = currentState.uiState.copy(
-                                reminders =
-                                    if (currentState.uiState.showPastReminders)
-                                        futureReminders + pastReminders
-                                    else futureReminders,
-                                nextReminder = nextReminder,
-                                timeUntilNextReminder = TimeWithUnit.fromTimestamp(nextReminder?.calculateTimeUntil()),
-                                progressUntilNextReminder = nextReminder?.calculateProgressUntil()
-                                    ?: 0f
-                            )
+                updateSuccess { uiState ->
+                    uiState.copy(
+                        reminders = buildDisplayedReminders(
+                            uiState.showPastReminders,
+                            checkTime
                         )
-                    } else currentState
+                    )
+                        .withNextReminder(getNextReminder(allReminders, checkTime))
                 }
-
             } else {
                 // update the time until next reminder
-                _screenState.update { currentState ->
-                    if (currentState is ScreenUiState.Success) {
-                        currentState.copy(
-                            uiState = currentState.uiState.copy(
-                                timeUntilNextReminder = TimeWithUnit.fromTimestamp(timeUntilNext),
-                                progressUntilNextReminder = reminder.calculateProgressUntil()
-                            )
-                        )
-                    } else currentState
+                updateSuccess { uiState ->
+                    uiState.copy(
+                        timeUntilNextReminder = TimeWithUnit.fromTimestamp(timeUntilNext),
+                        progressUntilNextReminder = reminder.calculateProgressUntil()
+                    )
                 }
             }
 
+        }
+    }
+
+    fun saveReminder(newReminder: Reminder) {
+        val reminderToEdit = (screenState.value as? ScreenUiState.Success)?.uiState?.reminderToEdit
+
+        // Update in-memory state right now
+        allReminders = (allReminders.filter { it.id != reminderToEdit?.id } + newReminder)
+            .sortedBy { it.timestamp }
+        val checkTime = System.currentTimeMillis()
+        updateSuccess { uiState ->
+            uiState.copy(
+                reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime),
+                showBottomSheet = false,
+                reminderToEdit = null,
+                reminderToDelete = null
+            ).withNextReminder(getNextReminder(allReminders, checkTime))
+        }
+        restartTimer()
+
+        // Persist in the background — UI is already updated
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<ReminderShowcaseApplication>()
+            reminderToEdit?.let { old ->
+                storage.deleteReminder(old.id)
+                old.cancelNotification(context)
+            }
+            storage.addReminder(newReminder)
+            newReminder.scheduleNotification(context)
         }
     }
 
     fun deleteReminder(reminder: Reminder) {
-        val currentState = screenState.value as? ScreenUiState.Success ?: return
+
+        allReminders = allReminders.filter { it.id != reminder.id }
+        val checkTime = System.currentTimeMillis()
+        updateSuccess { uiState ->
+            uiState.copy(
+                reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime),
+                reminderToDelete = null
+            ).withNextReminder(getNextReminder(allReminders, checkTime))
+        }
+        restartTimer()
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<ReminderShowcaseApplication>()
             reminder.cancelNotification(context)
             storage.deleteReminder(reminder.id)
-            val updatedReminders = storage.loadReminders()
-            _screenState.update {
-                currentState.copy(
-                    uiState = currentState.uiState.copy(
-                        reminders = updatedReminders,
-                        reminderToDelete = null
-                    )
-                )
-            }
         }
     }
 
     fun editReminder(reminder: Reminder) {
-        val currentState = screenState.value as? ScreenUiState.Success ?: return
-        _showBottomDSheet.update { true }
-        _screenState.update {
-            currentState.copy(
-                uiState = currentState.uiState.copy(
-                    reminderToEdit = reminder
-                )
-            )
-        }
+        updateSuccess { it.copy(reminderToEdit = reminder, showBottomSheet = true) }
     }
 
     fun hideBottomSheet() {
-        _showBottomDSheet.update { false }
+        updateSuccess { it.copy(showBottomSheet = false, reminderToEdit = null) }
     }
 
-    fun saveReminder(newReminder: Reminder) {
-        hideBottomSheet()
-
-        val currentState = screenState.value as? ScreenUiState.Success ?: return
-        viewModelScope.launch(Dispatchers.IO) {
-            val context = getApplication<ReminderShowcaseApplication>()
-
-            currentState.uiState.reminderToEdit?.let { oldReminder ->
-                storage.deleteReminder(oldReminder.id)
-                oldReminder.cancelNotification(context)
-            }
-            storage.addReminder(newReminder)
-            newReminder.scheduleNotification(context)
-            /** note: this is not very efficient, we should ideally observe the reminders and
-             * update the state accordingly, but for simplicity we just load them again after each change
-             */
-            val updatedReminders =
-                storage.loadReminders().sortedBy { it.timestamp }
-            val nextReminder = getNextReminder(updatedReminders, System.currentTimeMillis())
-            _screenState.update {
-                currentState.copy(
-                    uiState = currentState.uiState.copy(
-                        reminders = updatedReminders,
-                        nextReminder = nextReminder,
-                        reminderToEdit = null,
-                        reminderToDelete = null,
-                        timeUntilNextReminder = TimeWithUnit.fromTimestamp(nextReminder?.calculateTimeUntil()),
-                        progressUntilNextReminder = nextReminder?.calculateProgressUntil() ?: 0f
-                    )
-                )
-            }
-            restartTimer()
-        }
-
-
-    }
 
     fun toggleDeleteIndication(reminder: Reminder?) {
-        val currentState = screenState.value as? ScreenUiState.Success ?: return
-        _screenState.update {
-            currentState.copy(
-                uiState = currentState.uiState.copy(
-                    reminderToDelete = reminder
-                )
-            )
-        }
-
+        updateSuccess { it.copy(reminderToDelete = reminder) }
     }
 
     fun setShowPastReminders(checked: Boolean) {
-        val currentState = screenState.value as? ScreenUiState.Success ?: return
-        _screenState.update {
+        updateSuccess { uiState ->
             val checkTime = System.currentTimeMillis()
-            currentState.copy(
-                uiState = currentState.uiState.copy(
-                    showPastReminders = checked,
-                    reminders = if (checked) {
-                        getFutureReminders(
-                            currentState.uiState.reminders,
-                            checkTime
-                        ) +
-                                getPastReminders(
-                                    currentState.uiState.reminders,
-                                    checkTime
-                                )
-                    } else {
-                        getFutureReminders(
-                            currentState.uiState.reminders,
-                            checkTime
-                        )
-                    }
-                )
+            uiState.copy(
+                showPastReminders = checked,
+                reminders = buildDisplayedReminders(checked, checkTime)
             )
         }
-
     }
 
-    fun showBottomDialog() {
-        _showBottomDSheet.update { true }
-
+    fun showAddBottomDialog() {
+        updateSuccess { it.copy(showBottomSheet = true) }
     }
 }
