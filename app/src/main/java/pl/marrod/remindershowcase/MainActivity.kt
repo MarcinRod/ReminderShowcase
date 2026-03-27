@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -33,9 +34,10 @@ import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 
 
 
-// TODO: zasymolwać długotrwały zapis do pliku, żeby pokazać działanie korutyn
-// TODO: Poczyścić kod
+
+// TODO: Poczyścić kod - sprawdzić zepsute deep link, i dlaczego update nie dziala dla wersji bez view model
 // TODO: dodać ViewModel do zarządzania stanem (architektura MVVM)
+
 class MainActivity : ComponentActivity() {
     var permissionGranted by mutableStateOf(false)
     var showPermissionRationale by mutableStateOf(false)
@@ -46,9 +48,6 @@ class MainActivity : ComponentActivity() {
         if (isGranted) {
             permissionGranted = true
         } else {
-            // Check if the user has permanently denied the permission. This will happen if the user
-            // denied the permission and selected the "Don't ask again" option. This is reflected by
-            // shouldShowRequestPermissionRationale() returning false.
             showPermissionRationale=
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     !ActivityCompat.shouldShowRequestPermissionRationale(
@@ -69,7 +68,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        checkNotificationPermission()
+       // checkNotificationPermission()
 
         setContent {
             ReminderShowcaseTheme {
@@ -101,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AppNavHost(navController = navController)
+                    AppNavHost(navController = navController, permissionGranted = permissionGranted)
                     SnackbarHost(
                         hostState = snackbarHostState,
                         modifier = Modifier.align(Alignment.BottomCenter)

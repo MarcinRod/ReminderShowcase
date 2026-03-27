@@ -29,6 +29,20 @@ data class Reminder(
     val displayDateTime: String
         get() = timestamp.toDisplayDateTime()
 
+    fun calculateTimeUntil(): Long {
+        return (timestamp - System.currentTimeMillis()).coerceAtLeast(0L)
+    }
+
+    fun calculateProgressUntil(): Float {
+        val totalDuration = timestamp - createdAtTimestamp
+        val elapsedDuration = System.currentTimeMillis() - createdAtTimestamp
+        return if (totalDuration > 0) {
+            (elapsedDuration.toFloat() / totalDuration).coerceIn(0f, 1f)
+        } else {
+            1f
+        }
+    }
+
     fun scheduleNotification(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 

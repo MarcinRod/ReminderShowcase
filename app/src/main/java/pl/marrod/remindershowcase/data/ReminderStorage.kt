@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class ReminderStorage(private val context: Context) {
@@ -51,11 +53,21 @@ class ReminderStorage(private val context: Context) {
         }
     }
 
+     fun addReminderBlocking(reminder: Reminder) {
+
+            val reminders = loadReminders().toMutableList()
+            reminders.add(reminder)
+            saveReminders(reminders)
+            saveRemindersBlocking(numIterations = 10_000)
+
+    }
     suspend fun addReminder(reminder: Reminder) {
-        val reminders = loadReminders().toMutableList()
-        reminders.add(reminder)
-        saveReminders(reminders)
-        saveRemindersBlocking()
+        withContext(Dispatchers.IO) {
+            val reminders = loadReminders().toMutableList()
+            reminders.add(reminder)
+            saveReminders(reminders)
+            saveRemindersBlocking()
+        }
     }
 
     fun deleteReminder(id: String) {
