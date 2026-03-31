@@ -6,7 +6,6 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import pl.marrod.remindershowcase.ReminderShowcaseApplication
-import pl.marrod.remindershowcase.reminderShowcaseApplication
 import pl.marrod.remindershowcase.ui.screens.ReminderDetailViewModel
 import pl.marrod.remindershowcase.ui.screens.ReminderListViewModel
 
