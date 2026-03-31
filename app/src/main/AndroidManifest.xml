@@ -2,14 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--Przykład pozwolenia "normalnego", przyznawanego przy instalacji aplikacji-->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--Przykład pozwolenia "niebezpiecznego", przyznawanego przez użytkownika w wyniku prośby programisty    -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!--    For a production app published on the Play Store you would need to
-    declare in the store listing that the app is a reminder/alarm/calendar
-    app to pass review.-->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!--Pozwolenie USE_EXACT_ALARM jest pozwoleniem "normalnym", ale z ograniczeniami.
+    O takie pozwolenie mogą prosić tylko aplikację typu: budzik, kalendarz, przypomnienia-->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
 
     <application
         android:name=".ReminderShowcaseApplication"
@@ -24,8 +25,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.ReminderShowcase">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,9 +34,13 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${deepLinkScheme}" android:host="${deepLinkHost}" />
+
+                <data
+                    android:host="${deepLinkHost}"
+                    android:scheme="${deepLinkScheme}" />
             </intent-filter>
         </activity>
 

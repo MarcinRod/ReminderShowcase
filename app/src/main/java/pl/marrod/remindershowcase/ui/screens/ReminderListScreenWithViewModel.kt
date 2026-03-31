@@ -62,7 +62,7 @@ import pl.marrod.remindershowcase.ui.reminder.ReminderItemSimple
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderListScreen(
-    viewModel: ReminderListViewModel = viewModel(factory = AppWideViewModelProvider.Factory)
+    viewModel: ReminderListViewModel = viewModel(factory = AppWideViewModelProvider.factory)
 ) {
     val screenState by viewModel.screenState.collectAsState()
 

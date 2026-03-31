@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AlarmAdd
-import androidx.compose.material.icons.twotone.Alarm
 import androidx.compose.material.icons.twotone.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,11 +24,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.navigation.toRoute
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.data.ReminderStorage
+import pl.marrod.remindershowcase.ui.navigation.Destination
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
-import toDisplayDateTime
+import pl.marrod.remindershowcase.utils.toDisplayDateTime
 
+class ReminderDetailViewModel(
+    savedStateHandle: androidx.lifecycle.SavedStateHandle,
+    storage: ReminderStorage
+) : ViewModel() {
+    var route = savedStateHandle.toRoute<Destination.Details>()
+    val reminderId: String = route.reminderId
+    val reminder = storage.loadReminders().find { it.id == reminderId }
+}
 
 @Composable
 fun ReminderDetailScreen(
@@ -62,25 +70,30 @@ fun ReminderDetailScreen(
             )
         }
     ) { innerPadding ->
-        if(reminder == null) {
+        if (reminder == null) {
             Text(
                 text = "The reminder with the provided ID could not be found.",
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 textAlign = TextAlign.Center
             )
         } else {
             ReminderDetailsContents(
-                reminder = reminder ,
+                reminder = reminder,
                 modifier = Modifier.padding(innerPadding)
             )
         }
     }
 }
+
 @Composable
 fun ReminderDetailsContents(reminder: Reminder, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
     ) {
         Surface(
             modifier = Modifier.align(Alignment.Center),
@@ -101,6 +114,7 @@ fun ReminderDetailsContents(reminder: Reminder, modifier: Modifier = Modifier) {
         }
     }
 }
+
 @Preview
 @Composable
 fun ReminderDetailScreenPreview() {
@@ -118,7 +132,7 @@ fun ReminderDetailScreenPreview() {
                     title = { Text(reminder.title) },
                     navigationIcon = {
                         IconButton(
-                            onClick = {  }
+                            onClick = { }
                         ) {
                             Icon(
                                 imageVector = Icons.TwoTone.ArrowBack,

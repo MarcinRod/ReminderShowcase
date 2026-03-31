@@ -8,15 +8,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
@@ -46,7 +41,7 @@ import java.time.ZoneId
 import kotlinx.coroutines.launch
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.data.ReminderStorage
-import toDisplayDateTime
+import pl.marrod.remindershowcase.utils.toDisplayDateTime
 import java.util.*
 import kotlin.math.roundToInt
 
