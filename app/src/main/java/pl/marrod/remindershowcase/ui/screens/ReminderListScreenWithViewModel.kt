@@ -51,13 +51,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.factory.AppWideViewModelProvider
 import pl.marrod.remindershowcase.ui.reminder.ReminderBottomSheet
 import pl.marrod.remindershowcase.ui.reminder.ReminderItemSimple
+import pl.marrod.remindershowcase.utils.TimeWithUnit
+import pl.marrod.remindershowcase.utils.asString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +74,7 @@ fun ReminderListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My reminders") },
+                title = { Text(stringResource(R.string.my_reminders_vm)) },
                 navigationIcon = {
                     Icon(
                         imageVector = Icons.TwoTone.Alarm,
@@ -83,7 +87,7 @@ fun ReminderListScreen(
         floatingActionButton = {
             if(screenState is ScreenUiState.Success) {
                 ExtendedFloatingActionButton(
-                    text = { Text("Add reminder") },
+                    text = { Text(stringResource(R.string.add_reminder)) },
                     onClick = {
                         viewModel.showAddBottomDialog()
                     },
@@ -135,7 +139,7 @@ fun ReminderListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No reminders yet. Tap the button below to add your first reminder!",
+                                text = stringResource(R.string.no_reminders_msg),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -180,7 +184,7 @@ fun ReminderListScreen(
 
             is ScreenUiState.Error -> {
                 Box(modifier = Modifier.padding(innerPadding)) {
-                    Text(text = (screenState as ScreenUiState.Error).message)
+                    Text(text = (screenState as ScreenUiState.Error).message.asString())
                 }
             }
         }
@@ -224,7 +228,7 @@ fun ReminderListContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Show past reminders",
+                text = stringResource(R.string.show_past_reminders),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

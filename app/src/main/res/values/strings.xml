@@ -3,4 +3,23 @@
     <string name="screen_title_list">My Reminders</string>
     <string name="screen_title_add">Add Reminder</string>
     <string name="screen_title_edit">Edit Reminder</string>
+    <string name="broken_link">Broken link</string>
+    <string name="reminder_not_found">The reminder with the provided ID could not be found.</string>
+    <string name="detail_title_format">Title: %1$s</string>
+    <string name="detail_description_format">Description: %1$s</string>
+    <string name="detail_time_format">Time: %1$s</string>
+    <string name="title">Title</string>
+    <string name="description">Description</string>
+    <string name="time_of_reminder">Time of reminder</string>
+    <string name="save_schedule_reminder"><![CDATA[Save & Schedule Reminder]]></string>
+    <string name="save_changes">Save Changes</string>
+    <string name="cancel">Cancel</string>
+    <string name="next">Next</string>
+    <string name="back">Back</string>
+    <string name="ok">OK</string>
+    <string name="no_reminders_msg">No reminders yet. Tap + to add one!</string>
+    <string name="my_reminders_title">My reminders</string>
+    <string name="my_reminders_vm">My reminders (ViewModel)</string>
+    <string name="add_reminder">Add reminder</string>
+    <string name="show_past_reminders">Show past reminders</string>
 </resources>

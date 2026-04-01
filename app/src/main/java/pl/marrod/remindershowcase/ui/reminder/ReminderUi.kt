@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
@@ -39,6 +40,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.launch
+import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.data.ReminderStorage
 import pl.marrod.remindershowcase.utils.toDisplayDateTime
@@ -46,11 +48,10 @@ import java.util.*
 import kotlin.math.roundToInt
 
 /**
- * Unified add / edit screen.
- *
- * - [reminderId] == null  →  "Add" mode: all fields start empty, a new Reminder is created on save.
- * - [reminderId] != null  →  "Edit" mode: fields are pre-filled from storage, the existing entry
- *                            is replaced and its alarm is rescheduled on save.
+ *   Formularz do dodawania lub edycji przypomnienia.
+ *   Jeśli [reminderId] jest null, formularz działa w trybie "Dodaj",
+ *   a jeśli [reminderId] jest nie-null, formularz działa w trybie "Edytuj" i wstępnie wypełnia
+ *   pola danymi z istniejącego przypomnienia.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +104,7 @@ fun ReminderForm(
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("Title") },
+            label = { Text(stringResource(R.string.title)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -111,7 +112,7 @@ fun ReminderForm(
         OutlinedTextField(
             value = description,
             onValueChange = { description = it },
-            label = { Text("Description") },
+            label = { Text(stringResource(R.string.description)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3
         )
@@ -126,7 +127,7 @@ fun ReminderForm(
                 value = reminderDateTime,
                 onValueChange = { },
                 readOnly = true,
-                label = { Text("Time of reminder") },
+                label = { Text(stringResource(R.string.time_of_reminder)) },
                 trailingIcon = {
                     IconButton(
                         onClick = { showTimePicker = true }
@@ -153,19 +154,18 @@ fun ReminderForm(
                         title = "",
                         description = "",
                         timestamp = 0
-                    ))
-                        .copy(title = title, description = description, timestamp = timestamp)
-
-                    //    if (existing != null) storage.deleteReminder(existing.id)
-                    // storage.addReminder(reminder)
-                    //  reminder.scheduleNotification(context)
+                    )).copy(title = title, description = description, timestamp = timestamp)
                     onSaved(reminder)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = title.isNotBlank()
         ) {
-            Text(if (existing == null) "Save & Schedule Reminder" else "Save Changes")
+            Text(
+                if (existing == null) stringResource(R.string.save_schedule_reminder) else stringResource(
+                    R.string.save_changes
+                )
+            )
         }
     }
 }
@@ -179,6 +179,8 @@ fun ReminderBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        // sheetState pozwala nam kontrolować zachowanie bottom sheetu,
+        // np. czy może być częściowo rozsunięty (skipPartiallyExpanded)
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
@@ -191,188 +193,6 @@ fun ReminderBottomSheet(
                 onSaved = { onSave(it) },
                 reminderId = reminder?.id
             )
-        }
-    }
-}
-
-@Composable
-fun ReminderItem(
-    reminder: Reminder,
-    isRevealed: Boolean,
-    onReveal: (Boolean) -> Unit,
-    onDelete: () -> Unit,
-    onEdit: () -> Unit
-) {
-
-    val density = LocalDensity.current
-    val revealWidthPx = with(density) { 56.dp.toPx() }
-    val dismissThresholdPx = revealWidthPx * 2.5f
-
-    val scope = rememberCoroutineScope()
-    val offsetX = remember { Animatable(0f) }
-
-    fun snapToRevealed() {
-        scope.launch {
-            offsetX.animateTo(
-                -revealWidthPx,
-                spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
-            )
-        }
-    }
-
-    fun snapToHidden() {
-        scope.launch {
-            offsetX.animateTo(0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-        }
-    }
-
-    fun settle() {
-        val current = offsetX.value
-        when {
-            current < -dismissThresholdPx -> {
-                Log.i("ReminderItem", "Dismissing reminder with id ${reminder.id}")
-                scope.launch {
-                    offsetX.animateTo(-3000f, tween(300, easing = FastOutLinearInEasing))
-                    Log.i(
-                        "ReminderItem",
-                        "Finished animation for reminder with id ${reminder.id}, now calling onDelete()"
-                    )
-                    onDelete()
-                    Log.i(
-                        "ReminderItem",
-                        "Called onDelete() for reminder with id ${reminder.id}, waiting for animation to finish..."
-                    )
-                    onReveal(false)
-                }
-
-            }
-
-            current > -(revealWidthPx / 2f) -> {
-                scope.launch {
-                    offsetX.animateTo(
-                        0f,
-                        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
-                    )
-                }
-                onReveal(false)
-            }
-
-            else -> snapToRevealed() // Snap back to revealed if it's past the halfway point but not far enough to dismiss
-        }
-    }
-    LaunchedEffect(isRevealed) {
-        if (!isRevealed) {
-            snapToHidden()
-        }
-    }
-    Box(modifier = Modifier.fillMaxWidth()) {
-        // Red delete background revealed behind the card
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clip(CardDefaults.shape)
-                .background(MaterialTheme.colorScheme.error),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.onError,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-        }
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                // Settle helper — shared by both gesture blocks
-                .let { thisModifier ->
-
-                    // Block 1: long press → reveal, then drag in the SAME gesture
-                    thisModifier
-                        .pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { _ ->
-                                    if (!isRevealed) {
-                                        onReveal(true)
-                                        snapToRevealed()
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    scope.launch {
-                                        offsetX.snapTo(
-                                            (offsetX.value + dragAmount.x).coerceAtMost(
-                                                0f
-                                            )
-                                        )
-                                    }
-                                },
-                                onDragEnd = { settle() },
-                                onDragCancel = { settle() }
-                            )
-                        }
-                        // Block 2: tap to close when already revealed
-                        .pointerInput(isRevealed) {
-                            if (!isRevealed) return@pointerInput
-                            detectTapGestures(onTap = {
-                                onReveal(false)
-                                scope.launch {
-                                    offsetX.animateTo(
-                                        0f,
-                                        spring(
-                                            Spring.DampingRatioMediumBouncy,
-                                            Spring.StiffnessMedium
-                                        )
-                                    )
-                                }
-                            })
-                        }
-                        // Block 3: swipe when already revealed (finger lifted after long press, new gesture)
-                        .pointerInput(isRevealed) {
-                            if (!isRevealed) return@pointerInput
-                            detectHorizontalDragGestures(
-                                onDragEnd = { settle() },
-                                onHorizontalDrag = { change, delta ->
-                                    change.consume()
-                                    scope.launch {
-                                        offsetX.snapTo((offsetX.value + delta).coerceAtMost(0f))
-                                    }
-                                }
-                            )
-                        }
-                },
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = reminder.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = reminder.displayDateTime,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    Row {
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -393,8 +213,13 @@ fun ReminderItemSimple(
     val dismissThresholdPx = revealWidthPx * 3f
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
-    val containerColor = if (!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
-    val textColor = if (!isFromPast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+    val containerColor =
+        if (!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background
+    val textColor =
+        if (!isFromPast) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground.copy(
+            alpha = 0.6f
+        )
+
     fun snapToRevealed() {
         scope.launch {
             offsetX.animateTo(
@@ -404,12 +229,19 @@ fun ReminderItemSimple(
         }
         onReveal(true)
     }
+    fun snapToHidden() {
+        scope.launch {
+            offsetX.animateTo(0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
+        }
+    }
 
     fun settle() {
+        // zapisz aktualny stan przesunięcia i zdecyduj,
+        // czy karta powinna zostać usunięta, wrócić do pozycji początkowej, czy pozostać odsłonięta
         val current = offsetX.value
         when {
             current < -dismissThresholdPx -> {
-
+                // Przekroczyliśmy próg usunięcia, animuj kartę poza ekran i wywołaj onDelete
                 scope.launch {
                     offsetX.animateTo(-3000f, tween(300, easing = FastOutLinearInEasing))
                     onDelete()
@@ -418,32 +250,29 @@ fun ReminderItemSimple(
             }
 
             current > -(revealWidthPx / 2f) -> {
+                // Przesunięcie jest zbyt małe, wróć do pozycji początkowej
                 onReveal(false)
-                scope.launch {
-                    offsetX.animateTo(
-                        0f,
-                        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium)
-                    )
-                }
+                snapToHidden()
             }
-
-            else -> snapToRevealed() // Snap back to revealed if it's past the halfway point but not far enough to dismiss
+            // Przesunięcie jest wystarczające, ale nie przekracza progu usunięcia
+            else -> snapToRevealed() // powrót karty do pozycji z odsłoniętą ikoną "Usuń"
         }
     }
 
-    fun snapToHidden() {
-        scope.launch {
-            offsetX.animateTo(0f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMedium))
-        }
-    }
 
+
+    // Efekt pozwalający zmienić stan odsłonięcia karty w reakcji na zmianę wartości isRevealed.
+    // Jeśli isRevealed stanie się false, karta zostanie automatycznie przesunięta z powrotem
+    // do pozycji ukrytej. W tej aplikacji zdarzy się to:
+    // - gdy użytkownik odsłoni kartę jednego przypomnienia, a następnie spróbuje odsłonić inną kartę
+    // - gdy użytkownik zacznie przesuwać listę
     LaunchedEffect(isRevealed) {
         if (!isRevealed) {
             snapToHidden()
         }
     }
     Box(modifier = modifier.fillMaxWidth()) {
-        // Red delete background revealed behind the card
+        // Czerwone tło z ikoną "Usuń", które jest widoczne, gdy karta jest odsłonięta
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -463,25 +292,38 @@ fun ReminderItemSimple(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
+                .pointerInput(Unit) { // specjalny modyfikator do obsługi gestów dotykowych
+                    // Gesty możliwe do wykrycia rozpoczynają się od przedrostka detect,
+                    // np. detectTapGestures, detectDragGestures, detectHorizontalDragGestures itp.
+                    detectHorizontalDragGestures(  // Wykrywamy tylko gesty poziomego przeciągania,
+                        // aby uniknąć konfliktów z przewijaniem listy
                         onDragStart = { _ ->
+                            // rozpoczęcie przeciągania
+                            // W tym kodzie tylko logujemy, ale można tu dodać dodatkową logikę,
+                            // np. informowanie rodzica o rozpoczęciu przeciągania
                             Log.i(
                                 "ReminderItemSimple",
                                 "Drag started for reminder with id ${reminder.id}, isRevealed = $isRevealed"
                             )
                         },
                         onHorizontalDrag = { change, dragAmount ->
+                            // podczas przeciągania, aktualizujemy offsetX o wartość dragAmount
+                            // (jest to różnica w pikselach od ostatniego zdarzenia przeciągania)
                             Log.i(
                                 "ReminderItemSimple",
                                 "Dragging reminder with id ${reminder.id}, dragAmount = $dragAmount"
                             )
+                            // consume() informuje system, że ten gest został obsłużony i nie powinien być przekazywany dalej
                             change.consume()
+                            // Aktualizujemy offsetX, ale ograniczamy go do wartości 0 (nie pozwalamy przesuwać karty w prawo)
                             scope.launch {
                                 offsetX.snapTo((offsetX.value + dragAmount).coerceAtMost(0f))
                             }
                         },
                         onDragEnd = {
+                            // zakończenie przeciągania, decydujemy, czy karta powinna zostać usunięta,
+                            // wrócić do pozycji początkowej, czy pozostać odsłonięta.
+                            // Wystąpi, gdy użytkownik puści kartę po przeciągnięciu.
                             Log.i(
                                 "ReminderItemSimple",
                                 "Drag ended for reminder with id ${reminder.id}, settling..."
@@ -489,6 +331,8 @@ fun ReminderItemSimple(
                             settle()
                         },
                         onDragCancel = {
+                            // przeciąganie zostało anulowane (np. przez system lub inny gest),
+                            // karta powinna wrócić do pozycji początkowej
                             Log.i(
                                 "ReminderItemSimple",
                                 "Drag cancelled for reminder with id ${reminder.id}, settling..."
@@ -520,7 +364,7 @@ fun ReminderItemSimple(
                             style = MaterialTheme.typography.labelMedium,
                             color = textColor,
 
-                        )
+                            )
                     }
                     Row {
                         IconButton(onClick = onEdit) {
@@ -603,17 +447,17 @@ private fun DateTimePickerDialog(
                         .padding(bottom = 8.dp)
                         .padding(horizontal = 16.dp),
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(modifier = Modifier.weight(1f))
                     if (page == 0) {
                         TextButton(onClick = {
                             page = 1
-                        }) { Text("Next") }
+                        }) { Text(stringResource(R.string.next)) }
                     } else {
 
                         TextButton(onClick = {
                             page = 0
-                        }) { Text("Back") }
+                        }) { Text(stringResource(R.string.back)) }
                         Spacer(modifier = Modifier.width(8.dp))
                         TextButton(onClick = {
                             val selectedDateMillis =
@@ -629,7 +473,7 @@ private fun DateTimePickerDialog(
                                 pickedDateTime.atZone(ZoneId.systemDefault())
                                     .toEpochSecond() * 1000L
                             )
-                        }) { Text("OK") }
+                        }) { Text(stringResource(R.string.ok)) }
 
                     }
                 }

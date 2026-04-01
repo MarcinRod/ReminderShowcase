@@ -21,11 +21,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.ui.reminder.ReminderBottomSheet
 import pl.marrod.remindershowcase.ui.reminder.ReminderItemSimple
@@ -46,7 +48,7 @@ fun ReminderListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My reminders") },
+                title = { Text(stringResource(R.string.my_reminders_title)) },
                 navigationIcon = {
                     Icon(
                         imageVector = Icons.TwoTone.Alarm,
@@ -58,7 +60,7 @@ fun ReminderListScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                text = { Text("Add reminder") },
+                text = { Text(stringResource(R.string.add_reminder)) },
                 onClick = {
                     showBottomSheet = true
                     selectedReminder = null
@@ -109,7 +111,7 @@ fun ReminderListContent(
                 .fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text("No reminders yet. Tap + to add one!", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.no_reminders_msg), style = MaterialTheme.typography.bodyLarge)
         }
     } else {
         var recomputeKey by remember { mutableStateOf(0) }
@@ -149,7 +151,7 @@ fun ReminderListContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Show past reminders",
+                    text = stringResource(R.string.show_past_reminders),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

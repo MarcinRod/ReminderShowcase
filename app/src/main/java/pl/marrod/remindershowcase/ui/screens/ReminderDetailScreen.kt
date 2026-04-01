@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.ArrowBack
@@ -21,41 +22,39 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.navigation.toRoute
+import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.data.ReminderStorage
-import pl.marrod.remindershowcase.ui.navigation.Destination
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
 import pl.marrod.remindershowcase.utils.toDisplayDateTime
 
-class ReminderDetailViewModel(
-    savedStateHandle: androidx.lifecycle.SavedStateHandle,
-    storage: ReminderStorage
-) : ViewModel() {
-    var route = savedStateHandle.toRoute<Destination.Details>()
-    val reminderId: String = route.reminderId
-    val reminder = storage.loadReminders().find { it.id == reminderId }
-}
 
+/**
+ * Ekran szczegółów przypomnienia, który bezpośrednio ładuje dane przypomnienia na podstawie
+ * przekazanego reminderId.
+ */
 @Composable
 fun ReminderDetailScreen(
     reminderId: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val contxt = LocalContext.current
+    val context = LocalContext.current
+    // Używamy funkcji remember z kluczem reminderId, aby załadować dane przypomnienia i je zapamiętać
+    // dla każdego unikalnego reminderId (np. dla przypadku gdy klikniemy w nowe powiadomienie
+    // podczas wyświetlania szczegółów innego).
     val reminder = remember(reminderId) {
-        ReminderStorage(contxt).loadReminders().find { it.id == reminderId }
+        ReminderStorage(context).loadReminders().find { it.id == reminderId }
     }
     @OptIn(ExperimentalMaterial3Api::class)
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(reminder?.title ?: "Broken link") },
+                title = { Text(reminder?.title ?: stringResource(R.string.broken_link)) },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack
@@ -72,7 +71,7 @@ fun ReminderDetailScreen(
     ) { innerPadding ->
         if (reminder == null) {
             Text(
-                text = "The reminder with the provided ID could not be found.",
+                text = stringResource(R.string.reminder_not_found),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
                     .fillMaxSize()
@@ -96,7 +95,7 @@ fun ReminderDetailsContents(reminder: Reminder, modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp)
     ) {
         Surface(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.9f),
             shape = MaterialTheme.shapes.medium,
             tonalElevation = 4.dp,
             shadowElevation = 8.dp,
@@ -107,9 +106,12 @@ fun ReminderDetailsContents(reminder: Reminder, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "Title: ${reminder.title}")
-                Text(text = "Description: ${reminder.description}")
-                Text(text = "Time: ${reminder.timestamp.toDisplayDateTime()}")
+                Text(text = stringResource(R.string.detail_title_format, reminder.title))
+                Text(text = stringResource(R.string.detail_description_format, reminder.description))
+                Text(text = stringResource(
+                    R.string.detail_time_format,
+                    reminder.timestamp.toDisplayDateTime()
+                ))
             }
         }
     }
