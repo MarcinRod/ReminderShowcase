@@ -5,6 +5,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.room.Entity
+import androidx.room.Ignore
+import androidx.room.PrimaryKey
 import pl.marrod.remindershowcase.notifications.ReminderReceiver
 import pl.marrod.remindershowcase.utils.toDisplayDateTime
 import pl.marrod.remindershowcase.utils.toDisplayTime
@@ -19,7 +22,9 @@ import pl.marrod.remindershowcase.utils.toDisplayTime
  * @param isNotificationScheduled Flaga wskazująca, czy powiadomienie dla tego przypomnienia zostało już zaplanowane,
  * aby uniknąć wielokrotnego planowania tego samego przypomnienia.
  */
+@Entity(tableName = "reminders")
 data class Reminder(
+    @PrimaryKey
     val id: String,
     val title: String,
     val description: String,
@@ -42,6 +47,8 @@ data class Reminder(
      */
     val displayTime: String
         get() = timestamp.toDisplayTime()
+
+
     /** Formatowanie daty i czasu przypomnienia do wyświetlenia w UI.
      * Przyjęty krótki format zgodny z lokalnymi ustawienia użytkownika, np. 31.03.2026 14:30*/
     val displayDateTime: String

@@ -1,12 +1,15 @@
 package pl.marrod.remindershowcase.ui.screens
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
-import pl.marrod.remindershowcase.data.ReminderStorage
+import pl.marrod.remindershowcase.data.RemindersRepository
 import pl.marrod.remindershowcase.ui.navigation.Destination
 import pl.marrod.remindershowcase.utils.UiText
 
@@ -38,6 +41,10 @@ sealed interface ReminderDetailUiState {
             get() = UiText.Resource(R.string.broken_link)
     }
 
+    /** Stan podczas oczekiwania na pierwsze dane z Flow */
+    object Loading : ReminderDetailUiState {
+        override val title = UiText.Resource(R.string.loading)
+    }
 }
 
 /**
@@ -47,32 +54,22 @@ sealed interface ReminderDetailUiState {
  * */
 class ReminderDetailViewModel(
     savedStateHandle: androidx.lifecycle.SavedStateHandle, // SavedStateHandle pozwala na dostęp do argumentów przekazanych podczas nawigacji, takich jak ID przypomnienia.
-    storage: ReminderStorage // storage jest potrzebne do załadowania danych przypomnienia z lokalnego magazynu, na podstawie ID.
+    private val repository: RemindersRepository
+    //storage: ReminderStorage // storage jest potrzebne do załadowania danych przypomnienia z lokalnego magazynu, na podstawie ID.
 ) : ViewModel() {
-    private val detailsFromRoute = savedStateHandle.toRoute<Destination.Details>()
-    private val reminderId: String = detailsFromRoute.reminderId
-    private val reminder = storage.loadReminders().find { it.id == reminderId } // potencjalne źródło problemu jeżeli operacja wczytywania byłaby długotrwała -
-    // w takim przypadku warto rozważyć asynchroniczne ładowanie danych, np. za pomocą viewModelScope.
+    private val reminderId: String = savedStateHandle.toRoute<Destination.Details>().reminderId
 
-    /** MutableStateFlow przechowuje aktualny stan UI, który jest emitowany przez [uiState] do obserwujących go komponentów UI.
-     * W przypadku tego prostego ekranu, stan jest inicjalizowany bezpośrednio w konstruktorze na podstawie tego,
-     * czy udało się znaleźć przypomnienie o podanym ID. Stan UI jest zmieniany tak naprawdę tylko raz, więc nie ma
-     * potrzeby emitowania nowych wartości po inicjalizacji. To rozwiązanie jest tutaj bardziej w celach demonstracyjnych.
-     */
-    private val _uiState = MutableStateFlow<ReminderDetailUiState>(
-        if (reminder != null) {
-            ReminderDetailUiState.Success(reminder)
-        } else {
-            ReminderDetailUiState.Error(UiText.Resource(R.string.reminder_not_found))
-        }
-    )
-
-    /**
-     * Rozdzielenie MutableStateFlow i StateFlow pozwala na enkapsulację stanu UI.
-     * Komponenty UI mogą obserwować uiState, ale nie mogą go modyfikować bezpośrednio,
-     * co zwiększa bezpieczeństwo i kontrolę nad tym, jak stan jest aktualizowany.
-     */
+    private val _uiState = MutableStateFlow<ReminderDetailUiState>(ReminderDetailUiState.Loading)
     val uiState = _uiState.asStateFlow()
 
-
+    init {
+        viewModelScope.launch {
+            repository.getReminderByIdFlow(reminderId).collect { reminder ->
+                _uiState.update {
+                    if (reminder != null) ReminderDetailUiState.Success(reminder)
+                    else ReminderDetailUiState.Error(UiText.Resource(R.string.reminder_not_found))
+                }
+            }
+        }
+    }
 }

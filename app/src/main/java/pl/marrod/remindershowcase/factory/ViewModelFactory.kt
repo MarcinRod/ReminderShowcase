@@ -30,7 +30,8 @@ object AppWideViewModelProvider {
             // za pomocą funkcji rozszerzającej `reminderShowcaseApplication()`, która jest zdefiniowana w ReminderShowcaseApplication.kt.
             ReminderListViewModel(
                 application = reminderShowcaseApplication(),
-                storage = reminderShowcaseApplication().storage
+                repository = reminderShowcaseApplication().remindersRepository,
+                //storage = reminderShowcaseApplication().storage
             )
         }
 
@@ -40,7 +41,8 @@ object AppWideViewModelProvider {
             // Dzięki temu możemy łatwo przekazywać dane do ViewModel, które są potrzebne do jego działania.
             ReminderDetailViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
-                storage = reminderShowcaseApplication().storage
+                repository = reminderShowcaseApplication().remindersRepository,
+                //storage = reminderShowcaseApplication().storage
             )
         }
 

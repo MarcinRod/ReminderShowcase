@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,14 +26,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.toRoute
+import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
-import pl.marrod.remindershowcase.data.ReminderStorage
 import pl.marrod.remindershowcase.factory.AppWideViewModelProvider
 import pl.marrod.remindershowcase.ui.navigation.Destination
 import pl.marrod.remindershowcase.ui.theme.ReminderShowcaseTheme
@@ -97,8 +101,56 @@ fun ReminderDetailScreen(
                     modifier = modifier.padding(innerPadding)
                 )
             }
+
+            ReminderDetailUiState.Loading -> {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .size(96.dp)
+                            .align(Alignment.Center)
+                    )
+                }
+            }
         }
 
     }
 }
+
+
+@Composable
+fun ReminderDetailsContents(reminder: Reminder, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Surface(
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.9f),
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 4.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = stringResource(R.string.detail_title_format, reminder.title))
+                Text(text = stringResource(R.string.detail_description_format, reminder.description))
+                Text(text = stringResource(
+                    R.string.detail_time_format,
+                    reminder.timestamp.toDisplayDateTime()
+                ))
+            }
+        }
+    }
+}
+
 

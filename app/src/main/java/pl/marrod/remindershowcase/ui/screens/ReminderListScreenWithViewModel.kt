@@ -59,7 +59,7 @@ import pl.marrod.remindershowcase.R
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.factory.AppWideViewModelProvider
 import pl.marrod.remindershowcase.ui.reminder.ReminderBottomSheet
-import pl.marrod.remindershowcase.ui.reminder.ReminderItemSimple
+import pl.marrod.remindershowcase.ui.reminder.ReminderItem
 import pl.marrod.remindershowcase.utils.TimeWithUnit
 import pl.marrod.remindershowcase.utils.asString
 
@@ -265,7 +265,7 @@ fun ReminderListContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(reminders, key = { it.id }) { reminder ->
-                ReminderItemSimple(
+                ReminderItem(
                     reminder = reminder,
                     isFromPast = reminder.timestamp < System.currentTimeMillis(),
                     isRevealed = reminderToDelete?.equals(reminder.id) ?: false,

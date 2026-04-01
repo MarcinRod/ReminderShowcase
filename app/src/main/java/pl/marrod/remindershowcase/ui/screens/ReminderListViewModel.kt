@@ -6,17 +6,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import pl.marrod.remindershowcase.ReminderShowcaseApplication
 import pl.marrod.remindershowcase.data.Reminder
+import pl.marrod.remindershowcase.data.RemindersRepository
 import pl.marrod.remindershowcase.utils.TimeWithUnit
 import pl.marrod.remindershowcase.utils.UiText
 import kotlin.collections.firstOrNull
-
-import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -107,7 +107,7 @@ data class ReminderListUiState(
 
 class ReminderListViewModel(
     application: android.app.Application,
-    private val storage: pl.marrod.remindershowcase.data.ReminderStorage
+    private val repository: RemindersRepository
 ) : AndroidViewModel(application) {
 
 
@@ -134,24 +134,46 @@ class ReminderListViewModel(
       Używana do obliczania listy przypomnień do wyświetlenia (z uwzględnieniem ustawienia showPastReminders) oraz do obliczania następnego przypomnienia.
        Przechowywanie tej listy w pamięci pozwala na szybkie aktualizacje UI bez konieczności ponownego ładowania danych z magazynu przy każdej zmianie.
      */
-    private var allReminders: List<Reminder> = emptyList()
+    private var allReminders = repository.allReminders.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
 
     init {
-        // W zakresie viewModelScope uruchamiamy korutynę, która ładuje przypomnienia z magazynu.
         viewModelScope.launch {
-            // Sztuczne opóźnienie, aby pokazać ekran ładowania.
+            // Symulacja dłuższego ładowania — w tym czasie wyświetlany jest ekran Loading.
             delay(3000)
-            loadReminders().let { resultState ->
-                //
-                _screenState.update { resultState }
-                if (resultState is ScreenUiState.Success) {
+
+            allReminders.collect { reminders ->
+                val checkTime = System.currentTimeMillis()
+                val nextReminder = getNextReminder(reminders, checkTime)
+
+                if (_screenState.value is ScreenUiState.Loading) {
+                    // Pierwsza emisja z Room — inicjalizujemy stan ekranu
+                    _screenState.update {
+                        ScreenUiState.Success(
+                            ReminderListUiState(
+                                reminders = buildDisplayedReminders(true, checkTime, reminders)
+                            ).withNextReminder(nextReminder)
+                        )
+                    }
+                    // Dajemy Compose czas na narysowanie elementów w stanie "niewidoczne"
+                    // zanim uruchomimy animację wejścia
                     delay(50)
                     updateSuccess { it.copy(animatedVisibility = true) }
-                    resultState.uiState.nextReminder?.let { restartTimer() }
+                    if (nextReminder != null) restartTimer()
+                } else {
+                    // Kolejne emisje — aktualizacja listy po zapisie, edycji lub usunięciu
+                    updateSuccess { uiState ->
+                        uiState.copy(
+                            reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime, reminders)
+                        ).withNextReminder(nextReminder)
+                    }
+                    if (nextReminder != null) restartTimer() else timerJob?.cancel()
                 }
             }
         }
-
     }
 
 
@@ -176,9 +198,13 @@ class ReminderListViewModel(
      * Funkcja pomocnicza do budowania listy przypomnień do wyświetlenia w UI,
      * na podstawie wszystkich przypomnień i ustawienia showPastReminders.
      */
-    private fun buildDisplayedReminders(showPast: Boolean, checkTime: Long): List<Reminder> {
-        val future = getFutureReminders(allReminders, checkTime)
-        return if (showPast) future + getPastReminders(allReminders, checkTime) else future
+    private fun buildDisplayedReminders(
+        showPast: Boolean,
+        checkTime: Long,
+        reminders: List<Reminder> = allReminders.value
+    ): List<Reminder> {
+        val future = getFutureReminders(reminders, checkTime)
+        return if (showPast) future + getPastReminders(reminders, checkTime) else future
     }
 
     /**
@@ -189,26 +215,6 @@ class ReminderListViewModel(
         timerJob = viewModelScope.launch { updateJob() }
     }
 
-    /**
-     * Funkcja do ładowania przypomnień z magazynu. Jest oznaczona jako suspend, ponieważ operacja
-     * wczytywania danych z dysku może być czasochłonna i nie powinna blokować UI. Wykorzystuje withContext(Dispatchers.IO)
-     * do wykonania operacji wczytywania w kontekście IO, co jest odpowiednie dla operacji dyskowych.
-     * Po załadowaniu przypomnień aktualizuje stan UI na Success z odpowiednimi danymi.
-     * W przypadku błędu (niezaimplementowane w tej wersji) można by zwrócić stan Error z odpowiednim komunikatem.
-     */
-    private suspend fun loadReminders(): ScreenUiState = withContext(Dispatchers.IO) {
-        allReminders = storage.loadReminders()
-        val checkTime = System.currentTimeMillis()
-        val nextReminder = getNextReminder(allReminders, checkTime)
-        // Funkcja load reminders jest wywoływana tylko raz,
-        // podczas inicjalizacji ViewModel, domyślne ustawienie showPastReminders to true,
-        // więc można od razu zbudować listę przypomnień do wyświetlenia.
-        ScreenUiState.Success(
-            ReminderListUiState(
-                reminders = buildDisplayedReminders(showPast = true, checkTime),
-            ).withNextReminder(nextReminder)
-        )
-    }
 
     /**
      * Funkcja pomocnicza do znalezienia następnego przypomnienia, które ma się pojawić,
@@ -226,7 +232,7 @@ class ReminderListViewModel(
      */
     private fun getFutureReminders(reminders: List<Reminder>, checkTime: Long): List<Reminder> {
         return reminders.filter { it.timestamp >= checkTime }
-            .sortedBy { it.timestamp }
+          // Posortowane w zapytaniu .sortedBy { it.timestamp }
     }
 
     /**
@@ -235,8 +241,8 @@ class ReminderListViewModel(
      * Ta funkcja jest używana do wyświetlania listy przypomnień, gdy ustawienie showPastReminders jest true.
      */
     private fun getPastReminders(reminders: List<Reminder>, checkTime: Long): List<Reminder> {
-        return reminders.filter { it.timestamp < checkTime }
-            .sortedByDescending { it.timestamp }
+        return reminders.filter { it.timestamp < checkTime }.reversed()
+           // .sortedByDescending { it.timestamp }
     }
 
     /**
@@ -275,7 +281,7 @@ class ReminderListViewModel(
                             checkTime
                         )
                     )
-                        .withNextReminder(getNextReminder(allReminders, checkTime))
+                        .withNextReminder(getNextReminder(allReminders.value, checkTime))
                 }
             } else {
                 // Aktualizujemy czas do następnego przypomnienia i postęp,
@@ -298,39 +304,25 @@ class ReminderListViewModel(
      * ponieważ UI już pokazuje, że przypomnienie zostało dodane lub edytowane.
      */
     fun saveReminder(newReminder: Reminder) {
-        // Sprawdzamy, czy obecnie edytujemy jakieś przypomnienie, sprawdzając czy stan UI zawiera przypomnienie do edycji.
         val reminderToEdit = (screenState.value as? ScreenUiState.Success)?.uiState?.reminderToEdit
 
-        // Aktualizacja listy w pamięci przez usunięcie starego przypomnienia (jeśli edytujemy) (operacja filter)
-        // i dodanie nowego, a następnie posortowanie listy po czasie.
-        allReminders = (allReminders.filter { it.id != reminderToEdit?.id } + newReminder)
-            .sortedBy { it.timestamp }
-
-        val checkTime = System.currentTimeMillis()
-        // Aktualizujemy stan UI
+        // Zamykamy BottomSheet natychmiast — lista zaktualizuje się gdy Room wyemituje nowe dane
         updateSuccess { uiState ->
             uiState.copy(
-                reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime),
                 showBottomSheet = false,
                 reminderToEdit = null,
                 reminderToDelete = null
-            ).withNextReminder(getNextReminder(allReminders, checkTime))
+            )
         }
-        // restartujemy timer, aby zaczął aktualizować czas do następnego przypomnienia na podstawie nowej listy przypomnień
-        restartTimer()
 
-        // Faktyczny zapis nowej listy przypomnień do magazynu wykonujemy w tle, aby nie blokować UI.
-        // Tutaj również zaplanowen jest powiadomienie
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<ReminderShowcaseApplication>()
-            // Jeżeli edytujemy - usuwamy z pamięci i magazynu stare przypomnienie,
-            // a następnie anulujemy jego powiadomienie, aby nie było duplikatów.
-            reminderToEdit?.let { old ->
-                storage.deleteReminder(old.id)
-                old.cancelNotification(context)
-            }
-            storage.addReminder(newReminder)
             newReminder.scheduleNotification(context)
+            reminderToEdit?.let { old ->
+                old.cancelNotification(context)
+                repository.updateReminder(newReminder)
+            } ?: repository.insertReminder(newReminder)
+            // kolektor allReminders automatycznie przebuduje listę i zrestartuje timer
         }
     }
 
@@ -343,20 +335,14 @@ class ReminderListViewModel(
      * ponieważ UI już pokazuje, że przypomnienie zostało usunięte.
      */
     fun deleteReminder(reminder: Reminder) {
+        // Chowamy wskaźnik usunięcia natychmiast — lista zaktualizuje się gdy Room wyemituje nowe dane
+        updateSuccess { uiState -> uiState.copy(reminderToDelete = null) }
 
-        allReminders = allReminders.filter { it.id != reminder.id }
-        val checkTime = System.currentTimeMillis()
-        updateSuccess { uiState ->
-            uiState.copy(
-                reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime),
-                reminderToDelete = null
-            ).withNextReminder(getNextReminder(allReminders, checkTime))
-        }
-        restartTimer()
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<ReminderShowcaseApplication>()
             reminder.cancelNotification(context)
-            storage.deleteReminder(reminder.id)
+            repository.deleteReminder(reminder)
+            // kolektor allReminders automatycznie przebuduje listę i zrestartuje timer
         }
     }
 
