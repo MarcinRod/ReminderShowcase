@@ -18,7 +18,6 @@ import pl.marrod.remindershowcase.utils.TimeWithUnit
 import pl.marrod.remindershowcase.utils.UiText
 import kotlin.collections.firstOrNull
 
-//TODO: sprawdzić dokumetacje po zmianie na Room
 
 /**
  * Klasa reprezentująca stan UI dla ekranu listy przypomnień. Zawiera trzy stany:
@@ -105,12 +104,10 @@ data class ReminderListUiState(
 }
 
 
-
 class ReminderListViewModel(
     application: android.app.Application,
     private val repository: RemindersRepository
 ) : AndroidViewModel(application) {
-
 
 
     /** MutableStateFlow przechowuje aktualny stan UI, który jest emitowany przez [screenState] do obserwujących go komponentów UI.
@@ -131,10 +128,14 @@ class ReminderListViewModel(
     private var timerJob: Job? = null
 
     /**
-     * Przechowuje wszystkie przypomnienia załadowane z magazynu. Jest aktualizowana przy każdej zmianie (dodanie, edycja, usunięcie przypomnienia).
-      Używana do obliczania listy przypomnień do wyświetlenia (z uwzględnieniem ustawienia showPastReminders) oraz do obliczania następnego przypomnienia.
-       Przechowywanie tej listy w pamięci pozwala na szybkie aktualizacje UI bez konieczności ponownego ładowania danych z magazynu przy każdej zmianie.
-     */
+     * Przechowuje wszystkie przypomnienia załadowane z magazynu jako StateFlow. Jest automatycznie aktualizowana przy każdej zmianie (dodanie, edycja, usunięcie przypomnienia).
+     * Używana do obliczania listy przypomnień do wyświetlenia (z uwzględnieniem ustawienia showPastReminders) oraz do obliczania następnego przypomnienia.
+     * W odróżnieniu od rozwiązania z zapisem danych w pliku json tutaj nasłuchujemy zmian we Flow z bazy danych i "zbieramy" je za pomocą collect,
+     * które jest zainicjowane w bloku init.
+     *
+     * Do stworzenia StateFlow ze zwykłego Flow używamy operatora stateIn, który pozwala na określenie zakresu życia (viewModelScope),
+     * strategii udostępniania (SharingStarted.WhileSubscribed(5000)) oraz wartości początkowej (emptyList()).
+     * Nie możemy wykorzystać bezpośrednio Flow z repozytorium, ponieważ musimy mieć dostęp do stanu i wartości z Flow czego sam Flow nie udostępnia */
     private var allReminders = repository.allReminders.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -142,16 +143,26 @@ class ReminderListViewModel(
     )
 
     init {
+        // W odróżnieniu od rozwiązania z zapisem danych w pliku json,
+        // tutaj nasłuchujemy zmian we Flow z bazy danych i "zbieramy"
+        // je za pomocą collect. Nie ma "ręcznego" ładowania danych tylko obserwacja zmian w bazie danych,
+        // co jest dużą zaletą i upraszcza zarządzanie stanem UI, ponieważ nie musimy martwić się o ręczne
+        // odświeżanie danych po każdej zmianie.
         viewModelScope.launch {
             // Symulacja dłuższego ładowania — w tym czasie wyświetlany jest ekran Loading.
             delay(3000)
 
+            // Zbieranie danych z StateFlow allReminders rozpoczęte z opóźnieniem.
+            // Za każdym razem, gdy baza danych emituje nową listę przypomnień
+            // (np. po dodaniu, edycji lub usunięciu przypomnienia),
             allReminders.collect { reminders ->
+                // Każda zmiana powoduje wykonanie tego bloku, w którym aktualizujemy stan UI.
                 val checkTime = System.currentTimeMillis()
                 val nextReminder = getNextReminder(reminders, checkTime)
 
                 if (_screenState.value is ScreenUiState.Loading) {
-                    // Pierwsza emisja z Room — inicjalizujemy stan ekranu
+                    // Przy pierwszej emisji z Room — inicjalizujemy stan ekranu
+                    // z pobranymi danymi
                     _screenState.update {
                         ScreenUiState.Success(
                             ReminderListUiState(
@@ -168,7 +179,11 @@ class ReminderListViewModel(
                     // Kolejne emisje — aktualizacja listy po zapisie, edycji lub usunięciu
                     updateSuccess { uiState ->
                         uiState.copy(
-                            reminders = buildDisplayedReminders(uiState.showPastReminders, checkTime, reminders)
+                            reminders = buildDisplayedReminders(
+                                uiState.showPastReminders,
+                                checkTime,
+                                reminders
+                            )
                         ).withNextReminder(nextReminder)
                     }
                     if (nextReminder != null) restartTimer() else timerJob?.cancel()
@@ -198,11 +213,16 @@ class ReminderListViewModel(
     /**
      * Funkcja pomocnicza do budowania listy przypomnień do wyświetlenia w UI,
      * na podstawie wszystkich przypomnień i ustawienia showPastReminders.
+     *
+     * Zmiana w porównaniu do poprzedniej implementacji polega na
+     * dodaniu parametru reminders, który pozwala na przekazanie listy przypomnień do przefiltrowania i posortowania,
+     * nie możemy korzystać bezpośrednio z allReminders.value, ponieważ ta wartość jest aktualizowana asynchronicznie
+     * i może nie być aktualna w momencie wywołania tej funkcji,
      */
     private fun buildDisplayedReminders(
         showPast: Boolean,
         checkTime: Long,
-        reminders: List<Reminder> = allReminders.value
+        reminders: List<Reminder>
     ): List<Reminder> {
         val future = getFutureReminders(reminders, checkTime)
         return if (showPast) future + getPastReminders(reminders, checkTime) else future
@@ -233,7 +253,7 @@ class ReminderListViewModel(
      */
     private fun getFutureReminders(reminders: List<Reminder>, checkTime: Long): List<Reminder> {
         return reminders.filter { it.timestamp >= checkTime }
-          // Posortowane w zapytaniu .sortedBy { it.timestamp }
+        // Posortowane w zapytaniu .sortedBy { it.timestamp }
     }
 
     /**
@@ -243,7 +263,7 @@ class ReminderListViewModel(
      */
     private fun getPastReminders(reminders: List<Reminder>, checkTime: Long): List<Reminder> {
         return reminders.filter { it.timestamp < checkTime }.reversed()
-           // .sortedByDescending { it.timestamp }
+        // .sortedByDescending { it.timestamp }
     }
 
     /**
@@ -279,7 +299,8 @@ class ReminderListViewModel(
                     uiState.copy(
                         reminders = buildDisplayedReminders(
                             uiState.showPastReminders,
-                            checkTime
+                            checkTime,
+                            allReminders.value
                         )
                     )
                         .withNextReminder(getNextReminder(allReminders.value, checkTime))
@@ -298,11 +319,17 @@ class ReminderListViewModel(
     }
 
     /**
-     * Funkcja do zapisywania przypomnienia, zarówno nowego, jak i edytowanego. Aktualizuje stan UI natychmiast po zmianie,
-     * a następnie wykonuje operację zapisu w tle, aby nie blokować UI. Dzięki temu użytkownik od razu widzi efekt dodania
-     * lub edycji przypomnienia, a operacje dyskowe i związane z powiadomieniami są wykonywane asynchronicznie.
-     * Jest to pewne zagrożenie w przypadku, gdy operacja zapisu do magazynu lub planowania powiadomienia zakończy się niepowodzeniem,
-     * ponieważ UI już pokazuje, że przypomnienie zostało dodane lub edytowane.
+     * Funkcja do zapisywania przypomnienia — zarówno nowego, jak i edytowanego.
+     *
+     * W odróżnieniu od wersji z plikiem JSON, nie ma tu ręcznej aktualizacji listy w pamięci
+     * ani ręcznego wywołania [restartTimer] — o to dba kolektor [allReminders] w bloku `init`,
+     * który reaguje na każdą zmianę w bazie Room. Dzięki temu jedyną operacją na wątku głównym
+     * jest zamknięcie BottomSheet, a cały ciężar synchronizacji UI przejmuje reaktywny Flow.
+     *
+     * Uwaga: UI wskazuje sukces operacji przed jej faktycznym zakończeniem — w razie błędu
+     * zapisu do bazy lub planowania powiadomienia użytkownik nie otrzyma informacji zwrotnej.
+     *
+     * @param newReminder Nowe lub zaktualizowane przypomnienie do zapisania w bazie danych.
      */
     fun saveReminder(newReminder: Reminder) {
         val reminderToEdit = (screenState.value as? ScreenUiState.Success)?.uiState?.reminderToEdit
@@ -328,12 +355,17 @@ class ReminderListViewModel(
     }
 
     /**
-     * Funkcja do usuwania przypomnienia. Aktualizuje stan UI natychmiast po zmianie, a następnie
-     * wykonuje operację usunięcia w tle, aby nie blokować UI. Usuwa przypomnienie z listy w pamięci,
-     * aktualizuje stan UI, restartuje timer, a następnie usuwa przypomnienie z magazynu i anuluje jego powiadomienie.
-     * Dzięki temu użytkownik od razu widzi efekt usunięcia przypomnienia, a operacje dyskowe i związane z powiadomieniami są wykonywane asynchronicznie.
-     * Jest to pewne zagrożenie w przypadku, gdy operacja usunięcia z magazynu lub anulowania powiadomienia zakończy się niepowodzeniem,
-     * ponieważ UI już pokazuje, że przypomnienie zostało usunięte.
+     * Funkcja do usuwania przypomnienia.
+     *
+     * W odróżnieniu od wersji z plikiem JSON, nie ma tu ręcznego filtrowania listy w pamięci
+     * ani ręcznego wywołania [restartTimer] — o to dba kolektor [allReminders] w bloku `init`,
+     * który reaguje na każdą zmianę w bazie Room. Jedyną operacją na wątku głównym jest
+     * schowanie wizualnego wskazania usunięcia, a resztą zajmuje się reaktywny Flow.
+     *
+     * Uwaga: UI wskazuje sukces operacji przed jej faktycznym zakończeniem — w razie błędu
+     * usunięcia z bazy lub anulowania powiadomienia użytkownik nie otrzyma informacji zwrotnej.
+     *
+     * @param reminder Przypomnienie do usunięcia z bazy danych.
      */
     fun deleteReminder(reminder: Reminder) {
         // Chowamy wskaźnik usunięcia natychmiast — lista zaktualizuje się gdy Room wyemituje nowe dane
@@ -381,7 +413,7 @@ class ReminderListViewModel(
             val checkTime = System.currentTimeMillis()
             uiState.copy(
                 showPastReminders = checked,
-                reminders = buildDisplayedReminders(checked, checkTime)
+                reminders = buildDisplayedReminders(checked, checkTime, allReminders.value)
             )
         }
     }
