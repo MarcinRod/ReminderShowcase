@@ -57,6 +57,9 @@ fun ReminderItem(
     val revealWidthPx = with(density) { 56.dp.toPx() }
     val dismissThresholdPx = revealWidthPx * 3f
     val scope = rememberCoroutineScope()
+    // Animatable to obiekt, który przechowuje aktualną wartość przesunięcia (offsetX)
+    // i pozwala na animowanie tej wartości w czasie. Zasadnie jest to "stan" przechowujący
+    // aktualne przesunięcie karty, który może być animowany do nowych wartości
     val offsetX = remember { Animatable(0f) }
     val containerColor =
         if (!isFromPast) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.background

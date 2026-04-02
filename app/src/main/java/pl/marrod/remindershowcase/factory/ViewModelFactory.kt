@@ -25,13 +25,13 @@ object AppWideViewModelProvider {
         // W tym przypadku mamy tylko jeden ViewModel, ReminderListViewModel, ale można dodać więcej, jeśli będzie potrzeba.
         initializer {
             // funkcja viewModelFactory zapewnia dostęp do CreationExtras,
-            // które zawierają kontekst aplikacji dzięki czemu możemy uzyskać dostęp do innych komponentów aplikacji, takich jak storage.
+            // które zawierają kontekst aplikacji dzięki czemu możemy uzyskać dostęp do innych komponentów aplikacji, takich jak baza danych.
             // W tym przypadku instancja klasy aplikacji (ReminderShowcaseApplication) jest uzyskiwana
-            // za pomocą funkcji rozszerzającej `reminderShowcaseApplication()`, która jest zdefiniowana w ReminderShowcaseApplication.kt.
+            // za pomocą funkcji rozszerzającej `reminderShowcaseApplication()`,.
             ReminderListViewModel(
                 application = reminderShowcaseApplication(),
                 repository = reminderShowcaseApplication().remindersRepository,
-                //storage = reminderShowcaseApplication().storage
+                //storage = reminderShowcaseApplication().storage // stara wersja (dla porównania, jak było wcześniej bez repozytorium)
             )
         }
 
@@ -42,7 +42,7 @@ object AppWideViewModelProvider {
             ReminderDetailViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
                 repository = reminderShowcaseApplication().remindersRepository,
-                //storage = reminderShowcaseApplication().storage
+                //storage = reminderShowcaseApplication().storage // stara wersja (dla porównania, jak było wcześniej bez repozytorium)
             )
         }
 

@@ -74,7 +74,7 @@ fun ReminderListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.my_reminders_vm)) },
+                title = { Text(stringResource(R.string.my_reminders_title)) },
                 navigationIcon = {
                     Icon(
                         imageVector = Icons.TwoTone.Alarm,
@@ -85,7 +85,7 @@ fun ReminderListScreen(
             )
         },
         floatingActionButton = {
-            if(screenState is ScreenUiState.Success) {
+            if (screenState is ScreenUiState.Success) {
                 ExtendedFloatingActionButton(
                     text = { Text(stringResource(R.string.add_reminder)) },
                     onClick = {
@@ -116,15 +116,13 @@ fun ReminderListScreen(
             is ScreenUiState.Success -> {
 
                 val uiState = (screenState as ScreenUiState.Success).uiState
-           //     val showBottomSheet by viewModel.showBottomSheet.collectAsState()
-            //    val animatedVisibility by viewModel.animatedVisibility.collectAsState()
                 AnimatedVisibility(
                     visible = uiState.animatedVisibility,
-                    enter = fadeIn() +  slideInVertically(
+                    enter = fadeIn() + slideInVertically(
                         initialOffsetY = { fullHeight -> fullHeight },
                         animationSpec = tween(500)
                     ),
-                    exit = fadeOut() +  slideOutVertically(
+                    exit = fadeOut() + slideOutVertically(
                         targetOffsetY = { fullHeight -> fullHeight },
                         animationSpec = tween(500)
                     ),

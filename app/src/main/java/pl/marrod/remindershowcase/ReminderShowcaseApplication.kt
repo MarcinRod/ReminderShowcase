@@ -11,16 +11,20 @@ import pl.marrod.remindershowcase.data.RemindersRepository
  */
 class ReminderShowcaseApplication() : Application() {
 
-    /** zmienna tylko do odczytu (private set), która przechowuje instancję ReminderStorage.
+    /**(STARA WERSJA DLA PORÓWNANIA) zmienna tylko do odczytu (private set), która przechowuje instancję ReminderStorage.
      * Jest oznaczona jako lateinit, co oznacza, że zostanie zainicjalizowana później, w funkcji onCreate. */
   //  lateinit var storage: ReminderStorage
    //     private set
 
     /**
      * dostęp do repozytorium przypomnień, które jest inicjalizowane przy użyciu DAO z bazy danych Room.
+     * inicjalizacja repozytorium odbywa się w sposób leniwy (lazy),
+     * co oznacza, że zostanie utworzone dopiero przy pierwszym dostępie
+     * do tej właściwości. Dzięki temu unikamy niepotrzebnej inicjalizacji,
+     * jeśli repozytorium nie jest używane od razu po uruchomieniu aplikacji.
      */
-    val remindersRepository by lazy {
-        RemindersRepository(
+    val remindersRepository by lazy { //
+         RemindersRepository(
             RemindersDb.getInstance(this).remindersDao()
         )
     }
@@ -28,7 +32,7 @@ class ReminderShowcaseApplication() : Application() {
     // Inicjalizujemy ReminderStorage, który będzie używany w całej aplikacji do zarządzania przypomnieniami.
     override fun onCreate() {
         super.onCreate()
-    //    storage = ReminderStorage(this)
+    //    storage = ReminderStorage(this) // stara wersja (dla porównania, jak było wcześniej bez repozytorium)
     }
 }
 

@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
@@ -22,26 +23,37 @@ import pl.marrod.remindershowcase.utils.toDisplayTime
  * @param isNotificationScheduled Flaga wskazująca, czy powiadomienie dla tego przypomnienia zostało już zaplanowane,
  * aby uniknąć wielokrotnego planowania tego samego przypomnienia.
  */
-@Entity(tableName = "reminders")
+@Entity(tableName = "reminders") // Adnotacja Room wskazująca, że ta klasa jest encją bazy danych i będzie przechowywana w tabeli "reminders"
 data class Reminder(
+    /** Unikalny identyfikator przypomnienia, oznaczony jako klucz główny w bazie danych Room (adnotacja, @PrimaryKey).
+     *   przykładowo może to być UUID generowany przy tworzeniu nowego przypomnienia lub automatycznie inkrementowany identyfikator.
+     *   Adnrotacja @PrimaryKey posiada możliwość ustawienia autoGenerate = true, co pozwala Room automatycznie generować unikalne
+     *   identyfikatory dla nowych wpisów, ale w tym przypadku zakładamy, że id jest generowane ręcznie (np. UUID), więc nie używamy tej opcji.
+     */
     @PrimaryKey
-    val id: String,
-    val title: String,
+    val id: String, val title: String,
     val description: String,
     val timestamp: Long,
+    /**
+     * W razie potrzeby można zmienić nazwy kolumn w bazie danych za pomocą adnotacji @ColumnInfo,
+     * należy wtedy jednak pamiętać, że przy zapytaniach do bazy danych (np. w DAO) trzeba będzie
+     * używać tych nazw kolumn zamiast nazw właściwości klasy.
+     */
+    @ColumnInfo(name = "created_at_timestamp")
     val createdAtTimestamp: Long = System.currentTimeMillis(),
     var isNotificationScheduled: Boolean = false
-){
+) {
     /**
      * Obiekt towarzyszący zawierający stałe i pomocnicze funkcje związane z klasą Reminder.
      */
     companion object {
         /** Enum definiujący klucze używane do przekazywania danych przypomnienia w Intencji z powiadomienia
          */
-       enum class Extras{
-           ID, TITLE, DESCRIPTION
-       }
+        enum class Extras {
+            ID, TITLE, DESCRIPTION
+        }
     }
+
     /** Właściwości pomocnicze do formatowania czasu przypomnienia do wyświetlenia w UI
      * Przyjęty krótki format zgodny z lokalnymi ustawieniami użytkownika, np. "14:30" lub "2:30 PM"
      */

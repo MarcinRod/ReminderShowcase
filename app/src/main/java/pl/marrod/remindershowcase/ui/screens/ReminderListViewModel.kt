@@ -18,6 +18,7 @@ import pl.marrod.remindershowcase.utils.TimeWithUnit
 import pl.marrod.remindershowcase.utils.UiText
 import kotlin.collections.firstOrNull
 
+//TODO: sprawdzić dokumetacje po zmianie na Room
 
 /**
  * Klasa reprezentująca stan UI dla ekranu listy przypomnień. Zawiera trzy stany:

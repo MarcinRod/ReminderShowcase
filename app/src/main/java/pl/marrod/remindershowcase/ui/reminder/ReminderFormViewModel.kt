@@ -32,7 +32,7 @@ data class ReminderFormUiState(
  * ViewModel dla formularza przypomnienia.
  *
  * Przyjmuje cały obiekt [Reminder] zamiast samego ID, dzięki czemu nie potrzebuje
- * dostępu do storage — dane są już dostępne w pamięci rodzica (np. ReminderListViewModel).
+ * dostępu do bazy — dane są już dostępne w pamięci rodzica (np. ReminderListViewModel).
  *
  * @param reminder Edytowane przypomnienie lub null w trybie dodawania.
  */
@@ -79,12 +79,14 @@ class ReminderFormViewModel(
     fun buildReminder(): Reminder? {
         val state = _uiState.value
         if (!state.isSaveEnabled) return null
-        return (reminder ?: Reminder(
-            id = UUID.randomUUID().toString(),
+        return (reminder ?:
+        // W trybie dodawania tworzymy nowy pusty obiekt z wygenerowanym ID i aktualnym czasem utworzenia
+        Reminder(
+            id = UUID.randomUUID().toString(), // generujemy nowe ID tylko w trybie dodawania
             title = "",
             description = "",
             timestamp = 0L
-        ).copy(
+        ).copy( //kopiujemy i nadpisujemy tylko pola edytowane w formularzu, reszta (id, createdAtTimestamp) pozostaje bez zmian
             title = state.title.trim(),
             description = state.description.trim(),
             timestamp = state.timestamp,
@@ -96,9 +98,9 @@ class ReminderFormViewModel(
         /**
          * Tworzy fabrykę ViewModel dla danego [reminder].
          *
-         * Użycie: viewModel(key = reminder?.id ?: "new", factory = ReminderFormViewModel.factory(reminder))
+         * Użycie: viewModel(key = reminder?.id ?: "unikalny_klucz", factory = ReminderFormViewModel.factory(reminder))
          *
-         * WYkorzystujemy viewModelFactory, podobnie jak w przypadku [pl.marrod.remindershowcase.factory.AppWideViewModelProvider],
+         * Wykorzystujemy viewModelFactory, podobnie jak w przypadku [pl.marrod.remindershowcase.factory.AppWideViewModelProvider],
          * ale aby umożliwić przekazanie całego obiektu [Reminder] do ViewModel musimy stworzyć niestandardową fabrykę,
          * która przyjmuje ten obiekt jako argument.
          */

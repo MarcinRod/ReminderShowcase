@@ -58,7 +58,8 @@ import java.util.UUID
  * Formularz do dodawania lub edycji przypomnienia.
  * Jeśli [reminder] jest null, formularz działa w trybie "Dodaj",
  * a jeśli [reminder] jest nie-null, formularz działa w trybie "Edytuj" i wstępnie wypełnia
- * pola danymi z istniejącego przypomnienia.
+ * pola danymi z istniejącego przypomnienia. W tej wersji wykorzystano ViewModel
+ * do zarządzania stanem formularza, co pozwala na łatwiejsze zarządzanie formularzem i jego ewntualne rozszerzenie.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,9 +68,10 @@ fun ReminderForm(
     modifier: Modifier = Modifier,
     reminder: Reminder? = null
 ) {
-    // Używamy klucza (reminder?.id ?: "new"), żeby dla każdego przypomnienia
-    // tworzony był osobny ViewModel — nowy dla dodawania, inny dla każdej edycji.
+
     val viewModelKey = remember(reminder?.id){ reminder?.id ?: UUID.randomUUID().toString() }
+    // Używamy klucza viewModelKey, żeby dla każdego przypomnienia
+    // tworzony był osobny ViewModel — nowy dla dodawania, inny dla każdej edycji.
     val viewModel: ReminderFormViewModel = viewModel(
         key = viewModelKey,
         factory = ReminderFormViewModel.factory(reminder)

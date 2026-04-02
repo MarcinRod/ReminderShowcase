@@ -55,7 +55,7 @@ sealed interface ReminderDetailUiState {
 class ReminderDetailViewModel(
     savedStateHandle: androidx.lifecycle.SavedStateHandle, // SavedStateHandle pozwala na dostęp do argumentów przekazanych podczas nawigacji, takich jak ID przypomnienia.
     private val repository: RemindersRepository
-    //storage: ReminderStorage // storage jest potrzebne do załadowania danych przypomnienia z lokalnego magazynu, na podstawie ID.
+    //storage: ReminderStorage // stara wersja (dla porównania, jak było wcześniej bez repozytorium
 ) : ViewModel() {
     private val reminderId: String = savedStateHandle.toRoute<Destination.Details>().reminderId
 
@@ -63,6 +63,10 @@ class ReminderDetailViewModel(
     val uiState = _uiState.asStateFlow()
 
     init {
+        // Aby porbać dane przypomnienia, korzystamy z funkcji getReminderByIdFlow z repozytorium, która zwraca Flow<Reminder?>.
+        // Flow pozwala na obserwowanie zmian danych w czasie rzeczywistym, więc jeśli przypomnienie
+        // zostanie zaktualizowane lub usunięte, UI zostanie automatycznie odświeżone, co jest dużą
+        // zaletą w porównaniu do tradycyjnego podejścia z suspend fun, które zwraca tylko jednorazową wartość.
         viewModelScope.launch {
             repository.getReminderByIdFlow(reminderId).collect { reminder ->
                 _uiState.update {
