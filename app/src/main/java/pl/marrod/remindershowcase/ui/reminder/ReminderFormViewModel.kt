@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.update
 import pl.marrod.remindershowcase.data.Reminder
 import pl.marrod.remindershowcase.utils.toDisplayDateTime
 import java.util.UUID
+import kotlin.collections.copy
+import kotlin.toString
 
 /**
  * Stan UI formularza przypomnienia. Przechowuje wszystkie pola formularza oraz
@@ -79,19 +81,22 @@ class ReminderFormViewModel(
     fun buildReminder(): Reminder? {
         val state = _uiState.value
         if (!state.isSaveEnabled) return null
-        return (reminder ?:
+        val base = reminder ?:
         // W trybie dodawania tworzymy nowy pusty obiekt z wygenerowanym ID i aktualnym czasem utworzenia
         Reminder(
-            id = UUID.randomUUID().toString(), // generujemy nowe ID tylko w trybie dodawania
+            id = UUID.randomUUID().toString(),
             title = "",
             description = "",
             timestamp = 0L
-        ).copy( //kopiujemy i nadpisujemy tylko pola edytowane w formularzu, reszta (id, createdAtTimestamp) pozostaje bez zmian
+        )
+        //kopiujemy i nadpisujemy tylko pola edytowane w formularzu, reszta (id, createdAtTimestamp) pozostaje bez zmian
+        return base.copy(
             title = state.title.trim(),
             description = state.description.trim(),
             timestamp = state.timestamp,
-            isNotificationScheduled = false  // zawsze resetujemy — stary obiekt mógł mieć true
-        ))
+            isNotificationScheduled = false
+        )
+
     }
 
     companion object {

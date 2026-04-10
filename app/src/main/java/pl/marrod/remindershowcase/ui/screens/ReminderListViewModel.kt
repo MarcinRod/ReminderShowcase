@@ -53,7 +53,7 @@ data class ReminderListUiState(
      * Następne przypomnienie, które ma się pojawić.
      * Może być null, jeśli nie ma żadnych przyszłych przypomnień
      */
-    val nextReminder: Reminder? = null,
+    val nextReminder: Reminder? = null, // TODO: aktualizacja przy edycji
     /**
      * Zapamiętuje przypomnienie do edycji
      */
@@ -343,7 +343,7 @@ class ReminderListViewModel(
             )
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch() {
             val context = getApplication<ReminderShowcaseApplication>()
             newReminder.scheduleNotification(context)
             reminderToEdit?.let { old ->
@@ -371,7 +371,7 @@ class ReminderListViewModel(
         // Chowamy wskaźnik usunięcia natychmiast — lista zaktualizuje się gdy Room wyemituje nowe dane
         updateSuccess { uiState -> uiState.copy(reminderToDelete = null) }
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch() {
             val context = getApplication<ReminderShowcaseApplication>()
             reminder.cancelNotification(context)
             repository.deleteReminder(reminder)

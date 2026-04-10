@@ -68,10 +68,11 @@ fun ReminderForm(
     modifier: Modifier = Modifier,
     reminder: Reminder? = null
 ) {
-
-    val viewModelKey = remember(reminder?.id){ reminder?.id ?: UUID.randomUUID().toString() }
+    val viewModelKey = rememberSaveable(reminder?.id){ reminder?.id ?: UUID.randomUUID().toString() }
     // Używamy klucza viewModelKey, żeby dla każdego przypomnienia
     // tworzony był osobny ViewModel — nowy dla dodawania, inny dla każdej edycji.
+    // klucz jest zapisywany dla zmian konfiguracji poprzez rememberSaveable, ponieważ od niego zależy czy tworzymy nowa
+    // instancje viewModel czy korzystamy ze starej.
     val viewModel: ReminderFormViewModel = viewModel(
         key = viewModelKey,
         factory = ReminderFormViewModel.factory(reminder)

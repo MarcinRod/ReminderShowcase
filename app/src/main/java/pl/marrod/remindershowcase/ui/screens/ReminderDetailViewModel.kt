@@ -68,6 +68,7 @@ class ReminderDetailViewModel(
         // zostanie zaktualizowane lub usunięte, UI zostanie automatycznie odświeżone, co jest dużą
         // zaletą w porównaniu do tradycyjnego podejścia z suspend fun, które zwraca tylko jednorazową wartość.
         viewModelScope.launch {
+
             repository.getReminderByIdFlow(reminderId).collect { reminder ->
                 _uiState.update {
                     if (reminder != null) ReminderDetailUiState.Success(reminder)

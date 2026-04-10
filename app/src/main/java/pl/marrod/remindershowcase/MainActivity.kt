@@ -119,6 +119,7 @@ class MainActivity : ComponentActivity() {
                 }
 
 
+
                 // LaunchedEffect do obsługi nawigacji z powiadomienia.
                 // Gdy currentIntent się zmieni (np. po kliknięciu powiadomienia),
                 // ten efekt zostanie ponownie uruchomiony, a navController.handleDeepLink()
