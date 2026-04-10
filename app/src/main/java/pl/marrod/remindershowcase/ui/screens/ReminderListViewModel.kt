@@ -53,7 +53,7 @@ data class ReminderListUiState(
      * Następne przypomnienie, które ma się pojawić.
      * Może być null, jeśli nie ma żadnych przyszłych przypomnień
      */
-    val nextReminder: Reminder? = null, // TODO: aktualizacja przy edycji
+    val nextReminder: Reminder? = null, 
     /**
      * Zapamiętuje przypomnienie do edycji
      */
