@@ -31,7 +31,8 @@ data class Reminder(
      *   identyfikatory dla nowych wpisów, ale w tym przypadku zakładamy, że id jest generowane ręcznie (np. UUID), więc nie używamy tej opcji.
      */
     @PrimaryKey
-    val id: String, val title: String,
+    val id: String,
+    val title: String,
     val description: String,
     val timestamp: Long,
     /**

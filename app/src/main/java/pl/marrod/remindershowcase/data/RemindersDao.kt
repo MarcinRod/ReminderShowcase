@@ -57,8 +57,8 @@ interface RemindersDao {
          * Metoda jest oznaczona jako suspend, ponieważ wykonuje zapytanie do bazy danych,
          * które jest operacją blokującą i powinno być wykonywane w kontekście korutyny.
          */
-        @Query("SELECT * FROM reminders WHERE id = :id")
-        suspend fun getReminderById(id: String): Reminder?
+        @Query("SELECT * FROM reminders WHERE id = :inId")
+        suspend fun getReminderById(inId: String): Reminder?
 
         /**
          * Pobiera pojedyncze przypomnienie z bazy danych na podstawie jego unikalnego identyfikatora (id) i zwraca je jako Flow.
